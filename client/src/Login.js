@@ -51,7 +51,6 @@ class Login extends Component {
               <Label for="username">Username</Label>
                 <Input type="text" name="username" id="username" placeholder="user" className="input-small" onChange={this.handleChange} value={this.state.eventName} />
             </FormGroup>
-
             <FormGroup>
               <Label for="password">Password</Label>
                 <Input type="password" name="password" id="password" placeholder="kevin" className="input-small" onChange={this.handleChange} value={this.state.password} />

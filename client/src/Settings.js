@@ -21,7 +21,7 @@ class Settings extends Component {
   handleFileRead = (e) => {
     const content = this.fileReader.result.split("\n");
     var allAttendees = [];
-    for (var v=0;v<100;v+=1) {//content.length;v+=1) {
+    for (var v=0;v<200;v+=1) {//content.length;v+=1) {
       if (content[v].length == 0) {
         continue;
       }

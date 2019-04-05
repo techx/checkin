@@ -61,10 +61,10 @@ class App extends Component {
               <Collapse isOpen={this.state.isOpen} navbar>
                 <Nav navbar>
                   <NavItem>
-                    <NavLink tag={RRNavLink} to="/badge" activeClassName="active">Badge</NavLink>
+                    <NavLink tag={RRNavLink} to="/" activeClassName="active">Event</NavLink>
                   </NavItem>
                   <NavItem>
-                    <NavLink tag={RRNavLink} to="/walk-on">Walk-On</NavLink>
+                    <NavLink tag={RRNavLink} to="/settings">Settings</NavLink>
                   </NavItem>
                 </Nav>
 

@@ -3,31 +3,29 @@ const state = {
   loggedIn: false,
   token: "",
   name: "",
+  event_id: 6,
   actions: [],
   currentEvent: null
 };
 const APICALLS = {
-  ATTENDEE_LIST: ["attendees", "POST"]
+  ATTENDEE_LIST: {url: "attendees", method: "POST", requiresToken: true},
+  ATTENDEE_ACTION: {url: "attendees/push", method:"POST", requiresToken: true},
+  CLIENT_STATUS: {url: "client/status", method:"POST", requiresToken: true},
+  CLIENT_LOGIN: {url: "client/login", method: "POST", requiresToken: false}
 };
 
 class Database {
   constructor() {
     // Load actions
-    state.actions = window.localStorage.getItem('actions', null) || [];
-    state.name = window.localStorage.getItem('name', null) || '';
+    state.actions = JSON.parse(window.localStorage.getItem('actions')) || [];
+    state.name = window.localStorage.getItem('name') || '';
     // If token is invalid
-    var token = window.localStorage.getItem('token', null) || '';
+    var token = window.localStorage.getItem('token') || '';
     if (token.length > 0 && token != "null") {
       state.loggedIn = true;
       state.token = token;
     }
-
-    var body = new FormData();
-    body.append('token', state.token);
-    this.apiCall("client/status", {
-      body: body,
-      method: "POST"
-    }).then(data => {
+    this.apiCall(APICALLS.CLIENT_STATUS, {}).then(data => {
       console.log("Client valid");
     }).catch(data => {
       console.log("Client invalid");
@@ -37,14 +35,22 @@ class Database {
     });
   }
 
-  apiCall(request, body) {
-    if (request == "")
-    {
-     body: body,
-     method: "POST"
-   }
+  apiCall(request, params) {
+    // request is type of APICALLS
+    var body = new FormData();
+    if (request.requiresToken) {
+      body.append('token', state.token);
+    }
+    body.append('params', JSON.stringify(params));
+    if (request == APICALLS.CLIENT_LOGIN) {
+      body = new FormData();
+      body.append('username', params.username);
+      body.append('password', params.password);
+    }
+    var form = { body: body, method: request.method };
+
     return new Promise((resolve, reject) => {
-      fetch(Constants.API_Location + request, form).then(results => {
+      fetch(Constants.API_Location + request.url, form).then(results => {
         try {
           if (!results.ok) { throw results }
           return results.json();
@@ -89,13 +95,7 @@ class Database {
   client_login(username, password) {
     return new Promise((resolve, reject) => {
       console.log("logging in");
-      var body = new FormData();
-      body.append('username', username);
-      body.append('password', password);
-      this.apiCall("client/login", {
-        body: body,
-        method: "POST"
-      }).then(data => {
+      this.apiCall(APICALLS.CLIENT_LOGIN, {username: username, password: password}).then(data => {
         resolve(data);
         state.loggedIn = true;
         state.token = data.token;
@@ -110,43 +110,51 @@ class Database {
   }
 
   event_getAttendees() {
-    return new Promise((resolve, reject) => {
-      var body = new FormData();
-      body.append('token', state.token);
-      body.append('event_id', 6);
-      this.apiCall("attendees", {
-        body: body,
-        method: "POST"
-      }).then(data =>  {
-        console.log("Get Attendees");
-        resolve(data)
-      }).catch(data => {
-        reject(data);
-      });
-    });
+    return this.apiCall(APICALLS.ATTENDEE_LIST, {'event_id': 6});
   }
   event_addAttendees(listOfAttendees) {
     for (var v=0;v<listOfAttendees.length;v+=1) {
       var attendee = listOfAttendees[v];
       var attendeeJSON = JSON.parse(JSON.stringify(attendee));
       attendeeJSON['action'] = "ADD";
-      attendeeJSON['event_id'] = 6;
-      var body = new FormData();
-      body.append('token', state.token);
-      body.append('actionDict', JSON.stringify(attendeeJSON));
-      this.apiCall("attendees/push", {
-        body: body,
-        method: "POST"
-      }).then(data =>  {
+      attendeeJSON['event_id'] = state.event_id;
+      this.apiCall(APICALLS.ATTENDEE_ACTION, attendeeJSON).then(data =>  {
         console.log("SUCCESS");
       }).catch(data => {
-        this.save_apiCall(body, "POST", "attendees/push" )
+        this.save_apiCall(APICALLS.ATTENDEE_ACTION, attendeeJSON);
       });
     }
   }
+  event_updateAttendee(attendeeJSON) {
+    // Requires id, value, key
+    attendeeJSON['action'] = "UPDATE";
+    attendeeJSON['event_id'] = state.event_id;
+    this.apiCall(APICALLS.ATTENDEE_ACTION, attendeeJSON).then(data =>  {
+      console.log("SUCCESS");
+    }).catch(data => {
+      this.save_apiCall(APICALLS.ATTENDEE_ACTION, attendeeJSON);
+    });
+  }
 
-  save_apiCall(body, method, url) {
+  save_apiCall(action, params) {
+    state.actions.push({action: action, params: params});
+    window.localStorage.setItem('actions', JSON.stringify(state.actions));
+  }
 
+  push_apiCall() {
+    if(state.actions.length == 0) {
+      return;
+    }
+    var actionsToDo = state.actions;
+    state.actions = [];
+    window.localStorage.setItem('actions', JSON.stringify(state.actions));
+    for (var v=0;v<actionsToDo.length;v+=1) {
+      this.apiCall(actionsToDo[v].action, actionsToDo[v].params).then(data =>  {
+        console.log("SUCCESS");
+      }).catch(data => {
+        this.save_apiCall(actionsToDo[v].action, actionsToDo[v].params);
+      });
+    }
   }
 }
 const THE_DATABASE = new Database();
