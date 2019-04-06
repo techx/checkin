@@ -7,7 +7,5 @@ from flask import request
 class UserCreate(Resource):
 
     @Auth.getClient(errorStatus)
-    def put(self, client):
-
-
+    def post(self, client):
         return errorStatus("no admin privilege")

@@ -3,31 +3,28 @@ from app.controllers.database import Database
 from . import errorStatus
 from flask_restful import Resource
 from flask import request
+import json
 
 class AttendeeList(Resource):
     @Auth.getClient(errorStatus)
-    def get(self, client):
-        if 'event_id' in request.form:
-            event = Database.getEvent(client, request.form['event_id'])
-            if event is None:
-                return errorStatus("event is nonexistant/not accessible by user")
-            return {'status': True, 'attendees': [a.as_dict() for a in event.attendees]}
-        return errorStatus("event is nonexistant")
+    def post(self, client):
+        if 'params' in request.form:
+            params = json.loads(request.form['params'])
+            if "event_id" in params:
+                event = Database.getEvent(client, params['event_id'])
+                if event is None:
+                    return errorStatus("event is nonexistant/not accessible by user")
+                return {'status': True, 'attendees': [a.as_dict() for a in event.attendees]}
+            return errorStatus("event is nonexistant")
+        return errorStatus("no data")
 
 class AttendeeAction(Resource):
     @Auth.getClient(errorStatus)
-    def put(self, client):
-        if 'data' in request.form:
-            updateCompleted = []
-            updateErrors = []
-            for actionDict in request.form['data']:
-                success = False
-                if 'updateNumber' in actionDict:
-                    updateNumber = actionDict['updateNumber']
-                    success = Databse.parseEventAction(client, actionDict)
-                if success:
-                    updateCompleted.append(updateNumber)
-                else:
-                    updateErrors.append(updateNumber)
-            return {'status': True, 'updatedNumbers': updateCompleted, 'errors': updateErrors}
+    def post(self, client):
+        if 'params' in request.form:
+            success = Database.parseEventAction(client, json.loads(request.form['params']))
+            if success:
+                return {'status': True}
+            else:
+                return errorStatus("could not complete action")
         return errorStatus("no data")

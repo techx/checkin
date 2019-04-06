@@ -18,6 +18,6 @@ class HelloWorld(Resource):
 api.add_resource(HelloWorld, '/api/v1/')
 api.add_resource(client.ClientLogin, '/api/v1/client/login')
 api.add_resource(client.ClientStatus, '/api/v1/client/status')
-api.add_resource(attendee.AttendeeList, '/api/v1/attendees')
+api.add_resource(attendee.AttendeeList, '/api/v1/attendees') #GET to get
 api.add_resource(attendee.AttendeeAction, '/api/v1/attendees/push')
 api.add_resource(user.UserCreate, '/api/v1/users/create')
