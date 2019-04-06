@@ -1,19 +1,28 @@
-import React, { Component, Fragment } from "react";
-import { Route, Redirect, Switch, NavLink as RRNavLink } from "react-router-dom";
-import { Col, Badge, Button, Table, Form, FormGroup, Label, Input, Container } from 'reactstrap';
-import { InputGroup, InputGroupAddon, InputGroupText, Pagination, PaginationItem, PaginationLink } from 'reactstrap';
+import React, { Component } from "react";
+import { Redirect } from "react-router-dom";
+import { Col, Badge, Button, FormGroup, Input, Container } from 'reactstrap';
+import { InputGroup, InputGroupAddon, CustomInput, InputGroupText } from 'reactstrap';
+
+import { UncontrolledPopover, PopoverHeader, PopoverBody } from 'reactstrap';
 import Database from "./Database";
 import Constants from "./Constants";
 import Attendee from "./models/Attendee";
 import ReactTable from "react-table";
 import Popup from "reactjs-popup";
-import 'react-table/react-table.css'
+import 'react-table/react-table.css';
+import 'react-s-alert/dist/s-alert-default.css';
+import 'react-s-alert/dist/s-alert-css-effects/slide.css';
 
-const PER_PAGE = 25;
+import Alert from 'react-s-alert';
 
 const LABEL_URL = `${process.env.PUBLIC_URL}/Label.label`;
-
-
+const ALERT_SETTINGS = {
+  position: 'top-right',
+  effect: 'slide',
+  beep: false,
+  timeout: 3000,
+  offset: 100
+};
 class Dashboard extends Component {
 
   constructor(props) {
@@ -24,7 +33,7 @@ class Dashboard extends Component {
       'printers': [],
       'printerName': Constants.DONT_PRINT_NAME,
       'tags': '',
-      'checkin': false,
+      'checkin': "doing nothing",
       'attendees': [],
       'filteredAttendees': [],
       'applyDisabled': true,
@@ -36,6 +45,10 @@ class Dashboard extends Component {
       this.printLabelXml = result;
     }).catch((e) => {
     });
+    this.getAttendees();
+  }
+
+  getAttendees = async () => {
     Database.event_getAttendees().then((result) => {
       var searchResults = [];
       for (var v = 0; v < result.attendees.length; v += 1) {
@@ -45,8 +58,12 @@ class Dashboard extends Component {
       }
       this.setState({ ...this.state, 'attendees': searchResults });
       this.updateFilteredAttendees("");
+      window.localStorage.setItem('attendees', JSON.stringify(searchResults));
+      Alert.success("Attendees loaded", ALERT_SETTINGS);
     }).catch((result) => {
-      console.log("could not fetch users");
+      console.log("could not fetch users; loading backup");
+      this.setState({ 'attendees': window.localStorage.getItem('attendees') || [] });
+      Alert.warning("Attendees loaded from backup", ALERT_SETTINGS);
     });
   }
 
@@ -68,7 +85,6 @@ class Dashboard extends Component {
       ...this.state,
       'page': Math.max(0, this.state.page - 1)
     });
-
   }
 
   nextPage = (e) => {
@@ -88,11 +104,10 @@ class Dashboard extends Component {
 
   handleChange = event => {
     this.setState({
-      [event.target.name]: (event.target.type == "checkbox") ? event.target.checked : event.target.value
+      [event.target.name]: (event.target.type === "checkbox") ? event.target.checked : event.target.value
     }, () => {
       // Check to enable applyDisabled
-      console.log(this.state);
-      if (this.state.checkin || this.state.tags.length > 0 || this.state.printerName != Constants.DONT_PRINT_NAME) {
+      if (this.state.checkin !== "doing nothing" || this.state.tags.length > 0 || this.state.printerName !== Constants.DONT_PRINT_NAME) {
         this.setState({
           'applyDisabled': false
         });
@@ -104,7 +119,7 @@ class Dashboard extends Component {
     });
   }
   print = (attendee) => {
-    if (this.state.printerName == Constants.DONT_PRINT_NAME) {
+    if (this.state.printerName === Constants.DONT_PRINT_NAME) {
       return;
     }
     const builder = new window.dymo.label.framework.LabelSetBuilder();
@@ -135,11 +150,13 @@ class Dashboard extends Component {
           this.applyFunctionActual();
         }
         break;
+      default:
+        break;
     }
   }
 
   onSearchChange = (e) => {
-    var searchValue = e.target.value.trim().toLowerCase();
+    var searchValue = e.target.value.toLowerCase();
     this.updateFilteredAttendees(searchValue);
   }
 
@@ -189,7 +206,7 @@ class Dashboard extends Component {
 
   onSearchKeyPress = (e) => {
     if (e.key === 'Enter') {
-      if (this.state.filteredAttendees.length === 1) {
+      if (this.state.filteredAttendees.length === 1 && !this.state.applyDisabled) {
         this.applyFunctionConfirm(this.state.filteredAttendees[0]);
         this.searchField.blur();
       } else {
@@ -208,27 +225,31 @@ class Dashboard extends Component {
   }
   applyFunctionActual = () => {
     const attendee = this.state.attendee;
-
     var tags = this.state.tags.split(",");
-    if (this.state.checkin) {
-      var attendeeJSON = { id: attendee.id, key: "CHECKIN", value: 1 };
-      attendee.updateCheckin(1);
-      // Database.event_updateAttendee(attendeeJSON);
+    var attendeeJSON;
+    if (this.state.checkin === "checkin") {
+      attendeeJSON = { id: attendee.id, key: "CHECKIN", value: this.state.day };
+      attendee.updateCheckin(this.state.day, true);
+      Database.event_updateAttendee(attendeeJSON);
+    } else if (this.state.checkin === "uncheckin") {
+      attendeeJSON = { id: attendee.id, key: "UNCHECKIN", value: this.state.day };
+      attendee.updateCheckin(this.state.day, false);
+      Database.event_updateAttendee(attendeeJSON);
     }
     if (tags.length > 0) {
       const sortedTags = attendee.updateTags(tags);
-      tags = sortedTags[0].map(tag => { return {tag: tag, key: "ACTION"}; }).concat(sortedTags[1].map(tag => { return {tag: tag, key: "UNACTION" };}));
+      tags = sortedTags[0].map(tag => {
+        return { tag: tag, key: "ACTION" };
+      }).concat(sortedTags[1].map(tag => { return { tag: tag, key: "UNACTION" }; }));
       for (var v = 0; v < tags.length; v += 1) {
         var tag = tags[v];
-        console.log(tag);
         if (tag.tag.length > 0) {
-          var attendeeJSON = { id: attendee.id, key: tag.key, value: tag.tag };
-          console.log(attendeeJSON);
-          // Database.event_updateAttendee(attendeeJSON);
+          attendeeJSON = { id: attendee.id, key: tag.key, value: tag.tag };
+          Database.event_updateAttendee(attendeeJSON);
         }
       }
     }
-    if (this.state.printerName != Constants.DONT_PRINT_NAME) {
+    if (this.state.printerName !== Constants.DONT_PRINT_NAME) {
       this.print(attendee);
     }
     this.setState({
@@ -239,13 +260,14 @@ class Dashboard extends Component {
     }, () => {
       // Set timeout because focus can't be instaneous
       setTimeout(() => { this.searchField.focus() }, 1);
+      Alert.success(attendee.name + " updated", ALERT_SETTINGS);
     });
+
   }
 
 
   render() {
     if (Database.client_loggedIn()) {
-      let searchResultsRows = null;
       const columns = [{ Header: 'Name', accessor: 'name' },
       { Header: 'School', accessor: 'school' },
       { Header: 'Email', accessor: 'email' },
@@ -285,12 +307,19 @@ class Dashboard extends Component {
           <Col>
             <InputGroup>
               <InputGroupAddon addonType="prepend">
-                <InputGroupText>
-                  <Input addon type="checkbox" label="Checkbox for following text input" id="checkin_button" checked={this.state.checkin} name="checkin" onChange={this.handleChange} />
-                </InputGroupText>
-                <InputGroupText><Label style={{ margin: 0 }} for="checkin_button">Checkin</Label></InputGroupText>
+                <Button id="PopoverMoreOptions" type="button">
+                  More Options
+                </Button>
               </InputGroupAddon>
-              <Input placeholder="Tags separated by commas (i.e. swag, !swag remove tags)" name="tags" value={this.state.tags} onChange={this.handleChange} />
+              <InputGroupAddon addonType="prepend">
+                <CustomInput id="checkin_input" type="select" name="checkin" value={this.state.checkin} onChange={this.handleChange}>
+                  <option value="doing nothing">No Action</option>
+                  <option value="checkin">Checkin</option>
+                  <option value="uncheckin">unCheckin</option>
+                </CustomInput>
+              </InputGroupAddon>
+              <Input placeholder="Tags separated by commas (i.e. swag, !swag remove tags)"
+                name="tags" value={this.state.tags} onChange={this.handleChange} />
               <InputGroupAddon addonType="prepend">
                 <InputGroupText>
                   Printer:
@@ -300,7 +329,12 @@ class Dashboard extends Component {
                 </Input>
               </InputGroupAddon>
             </InputGroup>
-            <Input name="searchValue" innerRef={ref => { this.searchField = ref }} value={this.state.searchValue} onChange={this.onSearchChange} onKeyPress={this.onSearchKeyPress} placeholder="Search for anything! ~1 will check for status for day 1" />
+            <Input name="searchValue" innerRef={ref => { this.searchField = ref }}
+              value={this.state.searchValue} onChange={this.onSearchChange}
+              onKeyPress={this.onSearchKeyPress} placeholder="Search for anything! ~1 will check for status for day 1" />
+            <br />
+            We are <b>{this.state.checkin}</b> for day <b>{this.state.day}
+            </b> with these tags: <b>[{this.state.tags}]</b> Printing to <b>{this.state.printerName}</b>
           </Col>
           <br />
           <Col>
@@ -317,9 +351,9 @@ class Dashboard extends Component {
                 <h2>Confirm for {this.state.attendee.name}</h2>
               </center>
               <br />
-              <p> Checkin: {this.state.checkin ? "True" : "False"} </p>
+              <p> Checkin: {this.state.checkin} for DAY {this.state.day}</p>
               <p> Additional Tags: {this.state.tags} </p>
-              <p> Print?: {this.state.printerName != Constants.DONT_PRINT_NAME ? "Yes" : "No"} </p>
+              <p> Print?: {this.state.printerName !== Constants.DONT_PRINT_NAME ? "Yes" : "No"} </p>
               <center>
                 <p> Press Enter or Apply Function </p>
                 <Button onClick={this.popupClose}>Cancel</Button>{' '}
@@ -327,6 +361,29 @@ class Dashboard extends Component {
               </center>
             </Container>
           </Popup>
+
+          <UncontrolledPopover trigger="legacy" placement="bottom" target="PopoverMoreOptions">
+            <PopoverHeader>More Options</PopoverHeader>
+            <PopoverBody>
+
+              <FormGroup>
+                <InputGroup>
+                  <InputGroupAddon addonType="prepend">Day:</InputGroupAddon>
+                  <Input type="number" min="1" name="day" value={this.state.day} onChange={this.handleChange} />
+                </InputGroup>
+
+                <InputGroup>
+                  <Button onClick={this.getAttendees}> Force Refresh </Button>
+                  <Button onClick={() => {
+                    Database.push_apiCall();
+                    Alert.success("Force pushing queued requests", ALERT_SETTINGS);
+                  }}> Force Push </Button>
+                  Total actions waiting to be pushed {Database.get_apiCallLength()}
+                  <Button onClick={() => { Database.clear_apiCall(); Alert.success("Cleared queued requests", ALERT_SETTINGS); }} > Force Clear </Button>
+                </InputGroup>
+              </FormGroup>
+            </PopoverBody>
+          </UncontrolledPopover>
         </Container>
       );
     } else {

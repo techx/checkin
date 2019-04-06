@@ -1,5 +1,5 @@
 import React, { Component, Fragment } from "react";
-import { HashRouter, Route, Redirect, Switch, NavLink as RRNavLink } from "react-router-dom";
+import { HashRouter, Route, Switch, NavLink as RRNavLink } from "react-router-dom";
 import {
   Container,
   Collapse,
@@ -10,17 +10,20 @@ import {
   NavItem,
   NavLink
 } from 'reactstrap';
-import logo from './logo.svg';
 import './App.css';
 import Dashboard from './Dashboard';
 import Database from './Database';
 import { Login, Logout } from './Login';
 import Settings from './Settings';
+import Alert from 'react-s-alert';
+
+import 'react-s-alert/dist/s-alert-default.css';
+import 'react-s-alert/dist/s-alert-css-effects/slide.css';
 
 class App extends Component {
+
   constructor(props) {
     super(props);
-
     this.toggle = this.toggle.bind(this);
     this.state = {
       isOpen: false,
@@ -85,13 +88,13 @@ class App extends Component {
             <Route path="/settings" component={Settings} />
             <Route path="/login" render={(props) => <Login onNameChange={this.updateName} {...props}/>} />
             <Route path="/logout" render={(props) => <Logout onNameChange={this.updateName} {...props}/>} />
-            <Route path="/" component={Dashboard} />
+            <Route path="/" render={(props) => <Dashboard alert={this.props.alert} {...props}/>} />/>
           </Switch>
         </HashRouter>
+        <Alert stack={{limit: 3}} />
       </Fragment>
     );
   }
 }
 
-
-export default App;
+export default App

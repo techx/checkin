@@ -1,6 +1,8 @@
 import React, { Component, Fragment } from "react";
 import { Col, Button, Table, Form, FormGroup, Label, Input, Container } from 'reactstrap';
 import { InputGroup, InputGroupAddon, InputGroupText, Pagination, PaginationItem, PaginationLink } from 'reactstrap';
+
+import { UncontrolledPopover, PopoverHeader, PopoverBody } from 'reactstrap';
 import Database from "./Database";
 import Attendee from "./models/Attendee";
 
@@ -21,7 +23,7 @@ class Settings extends Component {
   handleFileRead = (e) => {
     const content = this.fileReader.result.split("\n");
     var allAttendees = [];
-    for (var v=0;v<200;v+=1) {//content.length;v+=1) {
+    for (var v=0;v < content.length;v+=1) {
       if (content[v].length == 0) {
         continue;
       }
@@ -49,6 +51,38 @@ class Settings extends Component {
 
     return (
         <Container>
+          <Button id="PopoverAddEvent" type="button">
+            Create Event
+          </Button>
+          <Button id="PopoverAddUser" type="button">
+            Add User
+          </Button>
+        <UncontrolledPopover trigger="legacy" placement="bottom" target="PopoverAddUser">
+          <PopoverHeader>More Options</PopoverHeader>
+          <PopoverBody>
+
+            <FormGroup>
+              <InputGroup>
+                <InputGroupAddon addonType="prepend">Event Name:</InputGroupAddon>
+                <Input value={this.state.day} onChange={this.handleChange} />
+              </InputGroup>
+
+            </FormGroup>
+          </PopoverBody>
+        </UncontrolledPopover>
+        <UncontrolledPopover trigger="legacy" placement="bottom" target="PopoverAddEvent">
+          <PopoverHeader>More Options</PopoverHeader>
+          <PopoverBody>
+
+            <FormGroup>
+              <InputGroup>
+                <InputGroupAddon addonType="prepend">Event Name:</InputGroupAddon>
+                <Input value={this.state.day} onChange={this.handleChange} />
+              </InputGroup>
+
+            </FormGroup>
+          </PopoverBody>
+        </UncontrolledPopover>
           <Col>
           <p> Event: <Input type="select" name="printerName" onChange={this.handleChange}>
             {events}

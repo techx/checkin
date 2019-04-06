@@ -1,5 +1,5 @@
 import React, { Component } from 'react';
-import { Route, Redirect } from "react-router-dom";
+import { Redirect } from "react-router-dom";
 import { Col, Button, Form, FormGroup, Label, Input, Container } from 'reactstrap';
 import Database from './Database';
 
