@@ -45,7 +45,7 @@ class Attendee(db.Model):
     name = db.Column(db.String(40))
     email = db.Column(db.String(60))
     school = db.Column(db.String(60))
-    actions = db.Column(db.Text, default="")
+    actions = db.Column(db.Text, default=";")
     notes = db.Column(db.Text, default="")
     is_manual = db.Column(db.Boolean, default=False)
 
@@ -56,7 +56,7 @@ class Attendee(db.Model):
 
     logs = db.relationship("Log", back_populates="attendee")
 
-    def __init__(self, event, name, scan_value, email, school, type=0, is_manual=False):
+    def __init__(self, event, name, scan_value, email, school, type=0, is_manual=False, actions=";", checkin_status=0):
         self.name = name
         self.scan_value = scan_value
         self.email = email
@@ -64,6 +64,9 @@ class Attendee(db.Model):
         self.type = type
         self.is_manual = is_manual
         self.event = event
+        self.actions = actions
+        self.checkin_status = checkin_status
+
     def as_dict(self):
         return {c.name: str(getattr(self, c.name)) if getattr(self, c.name) is not None else None for c in self.__table__.columns}
 
@@ -86,6 +89,13 @@ class User(db.Model):
         self.name = name
         self.is_admin = is_admin
 
+    def as_dict(self):
+        return {
+            'name': self.name,
+            'id': self.id,
+            'is_admin': self.is_admin,
+            'events': [event.id for event in self.events]
+        }
 
 class Event(db.Model):
     __tablename__ = 'events'
@@ -98,3 +108,9 @@ class Event(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
 
     attendees = db.relationship("Attendee", back_populates='event')
+
+    def __init__(self, name, time):
+        self.name = name
+        self.time = time
+    def as_dict(self):
+        return {c.name: str(getattr(self, c.name)) if getattr(self, c.name) is not None else None for c in self.__table__.columns}

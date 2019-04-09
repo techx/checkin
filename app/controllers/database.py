@@ -1,9 +1,22 @@
 from app import db
 from app.models.checkin import *
-from functools import wraps
-
 
 class Database:
+
+    @staticmethod
+    def getUsers(client):
+        if Database.hasAdminPrivilege(client):
+            # Admin root bits!
+            return User.query.all()
+        return None
+
+    @staticmethod
+    def getEvents(client):
+        events = client.user.events
+        if Database.hasAdminPrivilege(client):
+            # Admin root bits!
+            events = Event.query.all()
+        return events
     @staticmethod
     def getEvent(client, event_id):
         """
@@ -29,39 +42,69 @@ class Database:
 
     @staticmethod
     def createUser(client, params):
-        if any(val not in params for val in ['name', 'username', 'password']):
+        if any(val not in params for val in ['name', 'username', 'password', 'is_admin']):
             return False
         if (Database.hasAdminPrivilege(client)):
+            print(params)
             user = User(
-                params['username'], params['password'], params['name'], False)
+                params['username'], params['password'], params['name'], params['is_admin'])
             db.session.add(user)
             db.session.commit()
             return True
         return False
 
     @staticmethod
-    def createEvent(client, actionDict):
-        if any(val not in actionDict for val in ['name', 'time']):
+    def createEvent(client, params):
+        if any(val not in params for val in ['name', 'time']):
             return False
         if (Database.hasAdminPrivilege(client)):
-            event = Event(name=actionDict['name'], time=actionDict['time'])
+            event = Event(name=params['name'], time=params['time'])
+            client.user.events.append(event)
             db.session.add(event)
             db.session.commit()
             return True
         return False
 
     @staticmethod
+    def parseEventAction(client, actionDict):
+        if any(val not in actionDict for val in ['action', 'event_id']):
+            return False
+        action = actionDict['action']
+        event_id = actionDict['event_id']
+        if (action == "ADD"):
+            if any(val not in actionDict for val in ['name']):
+                return False
+            event = Database.getEvent(client, event_id)
+            if (event is None):
+                return False
+            return Database_Event.createAttendee(event, actionDict)
+        elif (action == "UPDATE"):
+            if any(val not in actionDict for val in ['id', 'key', 'value']):
+                return False
+            attendee_id = actionDict["id"]
+            attendee = Database.getAttendee(client, event_id, attendee_id)
+            if (attendee is None):
+                return False
+            return Database_Attendee.updateAttendee(
+                attendee, actionDict['key'], actionDict['value'])
+        return False
+
+class Database_Event(object):
+    @staticmethod
     def createAttendee(event, actionDict):
-        if any(val not in actionDict for val in ['name', 'scan_value', 'email', 'school']):
+        if any(val not in actionDict for val in ['name', 'scan_value', 'email', 'school', 'tags', 'checkin_status']):
             return False
         if (Attendee.query.filter_by(scan_value=actionDict['scan_value'], event_id=event.id).first() is not None):
             print("no duplicate users allowed")
             return True
         attendee = Attendee(
-            event, actionDict['name'], actionDict['scan_value'], actionDict['email'], actionDict['school'])
+            event, actionDict['name'], actionDict['scan_value'], actionDict['email'], actionDict['school'], actions=actionDict['tags'], checkin_status=actionDict['checkin_status'])
         db.session.add(attendee)
         db.session.commit()
         return True
+
+
+class Database_Attendee(object):
 
     @staticmethod
     def updateAttendee(attendee, key, update_value):
@@ -86,27 +129,3 @@ class Database:
         db.session.commit()
         # TODO add UNCHECKIN, and UNACTION and other stuff
         return True
-
-    @staticmethod
-    def parseEventAction(client, actionDict):
-        if any(val not in actionDict for val in ['action', 'event_id']):
-            return False
-        action = actionDict['action']
-        event_id = actionDict['event_id']
-        if (action == "ADD"):
-            if any(val not in actionDict for val in ['name']):
-                return False
-            event = Database.getEvent(client, event_id)
-            if (event is None):
-                return False
-            return Database.createAttendee(event, actionDict)
-        elif (action == "UPDATE"):
-            if any(val not in actionDict for val in ['id', 'key', 'value']):
-                return False
-            attendee_id = actionDict["id"]
-            attendee = Database.getAttendee(client, event_id, attendee_id)
-            if (attendee is None):
-                return False
-            return Database.updateAttendee(
-                attendee, actionDict['key'], actionDict['value'])
-        return False
