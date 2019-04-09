@@ -1,5 +1,5 @@
 from app import db
-from app.models.checkin import *
+from app.models import *
 from app.helpers.passwords import *
 from enum import Enum
 from functools import wraps

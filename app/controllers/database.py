@@ -1,5 +1,5 @@
 from app import db
-from app.models.checkin import *
+from app.models import *
 
 class Database:
 
