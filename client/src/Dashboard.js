@@ -6,23 +6,17 @@ import { InputGroup, InputGroupAddon, CustomInput, InputGroupText } from 'reacts
 import { UncontrolledPopover, PopoverHeader, PopoverBody } from 'reactstrap';
 import Database from "./Database";
 import Constants from "./Constants";
-import Attendee from "./models/Attendee";
 import ReactTable from "react-table";
 import Popup from "reactjs-popup";
+import Attendee from "./models/Attendee";
 import 'react-table/react-table.css';
 import 'react-s-alert/dist/s-alert-default.css';
 import 'react-s-alert/dist/s-alert-css-effects/slide.css';
 
 import Alert from 'react-s-alert';
+import ALERT_SETTINGS from "./Constants";
 
 const LABEL_URL = `${process.env.PUBLIC_URL}/Label.label`;
-const ALERT_SETTINGS = {
-  position: 'top-right',
-  effect: 'slide',
-  beep: false,
-  timeout: 3000,
-  offset: 100
-};
 class Dashboard extends Component {
 
   constructor(props) {
@@ -46,23 +40,20 @@ class Dashboard extends Component {
     }).catch((e) => {
     });
     this.getAttendees();
+    if(Database.client_loginStatus() === 1) {
+      Alert.error("Can't connect to server", ALERT_SETTINGS);
+    }
   }
 
-  getAttendees = async () => {
+  getAttendees = () => {
     Database.event_getAttendees().then((result) => {
-      var searchResults = [];
-      for (var v = 0; v < result.attendees.length; v += 1) {
-        var atd = result.attendees[v];
-        var attendee = new Attendee(atd.name, atd.scan_value, atd.email, atd.school, atd.checkin_status, atd.notes, atd.actions, atd.id);
-        searchResults.push(attendee);
-      }
-      this.setState({ ...this.state, 'attendees': searchResults });
+      this.setState({ ...this.state, 'attendees': result });
       this.updateFilteredAttendees("");
-      window.localStorage.setItem('attendees', JSON.stringify(searchResults));
       Alert.success("Attendees loaded", ALERT_SETTINGS);
     }).catch((result) => {
       console.log("could not fetch users; loading backup");
-      this.setState({ 'attendees': window.localStorage.getItem('attendees') || [] });
+      this.setState({ 'attendees': result });
+      this.updateFilteredAttendees("");
       Alert.warning("Attendees loaded from backup", ALERT_SETTINGS);
     });
   }
@@ -267,6 +258,9 @@ class Dashboard extends Component {
 
 
   render() {
+    if (Database.client_currentEvent().id === 0) {
+      return (<Redirect to="/settings" />)
+    }
     if (Database.client_loggedIn()) {
       const columns = [{ Header: 'Name', accessor: 'name' },
       { Header: 'School', accessor: 'school' },
@@ -333,7 +327,7 @@ class Dashboard extends Component {
               value={this.state.searchValue} onChange={this.onSearchChange}
               onKeyPress={this.onSearchKeyPress} placeholder="Search for anything! ~1 will check for status for day 1" />
             <br />
-            We are <b>{this.state.checkin}</b> for day <b>{this.state.day}
+            We are <b>{this.state.checkin}</b> for day <b>{this.state.day}</b>  for <b>{Database.client_currentEvent().name}
             </b> with these tags: <b>[{this.state.tags}]</b> Printing to <b>{this.state.printerName}</b>
           </Col>
           <br />

@@ -1,13 +1,38 @@
 import Constants from "./Constants";
+import Attendee from "./models/Attendee";
+import Event from "./models/Event";
+import User from "./models/User";
+const emptyEvent = new Event("No selected event", 0);
 const state = {
-  loggedIn: false,
+  login_status: 0,
   token: "",
   name: "",
-  event_id: 6,
+  is_admin: false,
   actions: [],
-  currentEvent: null
+  currentEvent: emptyEvent,
+  id_to_event: {}
 };
 const APICALLS = {
+  EVENT_CREATE: {
+    url: "events/create",
+    method: "POST",
+    requiresToken: true
+  },
+  USER_CREATE: {
+    url: "users/create",
+    method: "POST",
+    requiresToken: true
+  },
+  USER_LIST: {
+    url: "users",
+    method: "POST",
+    requiresToken: true
+  },
+  EVENT_LIST: {
+    url: "events",
+    method: "POST",
+    requiresToken: true
+  },
   ATTENDEE_LIST: {
     url: "attendees",
     method: "POST",
@@ -35,10 +60,17 @@ class Database {
     // Load actions
     state.actions = JSON.parse(window.localStorage.getItem('actions')) || [];
     state.name = window.localStorage.getItem('name') || '';
+    state.is_admin = window.localStorage.getItem('is_admin') || false;
+    state.currentEvent = JSON.parse(window.localStorage.getItem('event')) || emptyEvent;
+    var events = JSON.parse(window.localStorage.getItem('events')) || [];
+    for (var v = 0; v < events.length; v += 1) {
+      var event = events[v];
+      state.id_to_event[event.id] = event;
+    }
     // If token is invalid
     var token = window.localStorage.getItem('token') || '';
     if (token.length > 0 && token !== "null") {
-      state.loggedIn = true;
+      state.login_status = 2;
       state.token = token;
     }
     this.apiCall(APICALLS.CLIENT_STATUS, {}).then(data => {
@@ -46,11 +78,12 @@ class Database {
     }).catch(data => {
       if (data !== Constants.API_ERROR_TIMEOUT) {
         console.log("Client invalid");
-        state.loggedIn = false;
+        state.login_status = 0;
         state.token = '';
         state.name = '';
       } else {
         console.log("Server timeout");
+        state.login_status = 1;
       }
     });
   }
@@ -80,11 +113,12 @@ class Database {
           }
           return results.json();
         } catch (err) {
-          reject("json could not be parsed");
+          reject(Constants.API_ERROR_TIMEOUT);
         }
       }).then(data => {
         try {
           if (data.status) {
+            state.login_status = 2;
             resolve(data);
           } else {
             reject(data);
@@ -103,15 +137,23 @@ class Database {
   }
 
   client_loggedIn() {
-    return state.loggedIn;
+    return state.login_status > 0;
+  }
+
+  client_loginStatus() {
+    return state.login_status;
   }
 
   client_name() {
     return state.name;
   }
 
+  client_isAdmin() {
+    return state.is_admin;
+  }
+
   client_logout() {
-    state.loggedIn = false;
+    state.login_status = 0;
     state.name = '';
     window.localStorage.setItem('token', "");
     window.localStorage.setItem('name', "");
@@ -125,11 +167,13 @@ class Database {
         password: password
       }).then(data => {
         resolve(data);
-        state.loggedIn = true;
+        state.login_status = 2;
         state.token = data.token;
         state.name = data.name;
+        state.is_admin = data.is_admin;
         window.localStorage.setItem('token', data.token);
         window.localStorage.setItem('name', data.name);
+        window.localStorage.setItem('is_admin', data.is_admin);
       }).catch(data => {
         THE_DATABASE.client_logout();
         reject(data);
@@ -137,9 +181,83 @@ class Database {
     });
   }
 
+  client_currentEvent() {
+    return state.currentEvent;
+  }
+  client_updateEventId(event_id) {
+    var events = JSON.parse(window.localStorage.getItem('events')) || [];
+    var event = events.find(x => x.id === event_id);
+    if (event == null) {
+      event = emptyEvent;
+    }
+    window.localStorage.setItem('event', JSON.stringify(event));
+    if (state.currentEvent !== event) {
+      // TODO:
+      // window.localStorage.setItem('attendees', JSON.stringify([]));
+    }
+    state.currentEvent = event;
+  }
+
+  client_createUser(params) {
+    return this.apiCall(APICALLS.USER_CREATE, params);
+  }
+
+  client_createEvent(params) {
+    return this.apiCall(APICALLS.EVENT_CREATE, params);
+  }
+
+  client_getUsers() {
+    return new Promise((resolve, reject) => {
+      this.apiCall(APICALLS.USER_LIST, {}).then(result => {
+        var users = [];
+        for (var v = 0; v < result.users.length; v += 1) {
+          var atd = result.users[v];
+          var user = new User(atd.name, atd.id, atd.is_admin, atd.events);
+          users.push(user);
+        }
+        resolve(users);
+        window.localStorage.setItem('users', JSON.stringify(users));
+      }).catch(data => {
+        reject(JSON.parse(window.localStorage.getItem('users')) || []);
+      });
+    });
+  }
+
+  user_getEvents() {
+    return new Promise((resolve, reject) => {
+      this.apiCall(APICALLS.EVENT_LIST, {}).then(result => {
+        var events = [emptyEvent];
+        for (var v = 0; v < result.events.length; v += 1) {
+          var atd = result.events[v];
+          var event = new Event(atd.name, atd.id);
+          state.id_to_event[event.id] = event;
+          events.push(event);
+        }
+        resolve(events);
+        window.localStorage.setItem('events', JSON.stringify(events));
+      }).catch(data => {
+        reject(JSON.parse(window.localStorage.getItem('events')) || []);
+      });
+    });
+  }
+
+  // Returns attendees backup or not backedup
   event_getAttendees() {
-    return this.apiCall(APICALLS.ATTENDEE_LIST, {
-      'event_id': 6
+    return new Promise((resolve, reject) => {
+      this.apiCall(APICALLS.ATTENDEE_LIST, {
+        'event_id': state.currentEvent.id
+      }).then(result => {
+        var searchResults = [];
+        for (var v = 0; v < result.attendees.length; v += 1) {
+          var atd = result.attendees[v];
+          var attendee = new Attendee(atd.name, atd.scan_value, atd.email, atd.school, atd.checkin_status, atd.notes, atd.actions, atd.id);
+          searchResults.push(attendee);
+        }
+        resolve(searchResults);
+        window.localStorage.setItem('attendees', JSON.stringify(searchResults));
+      }).catch(data => {
+        reject(JSON.parse(window.localStorage.getItem('attendees')) || []);
+      });
     });
   }
   event_addAttendees(listOfAttendees) {
@@ -147,7 +265,7 @@ class Database {
       var attendee = listOfAttendees[v];
       var attendeeJSON = JSON.parse(JSON.stringify(attendee));
       attendeeJSON['action'] = "ADD";
-      attendeeJSON['event_id'] = state.event_id;
+      attendeeJSON['event_id'] = state.currentEvent.id;
       this.apiCall(APICALLS.ATTENDEE_ACTION, attendeeJSON).then(data => {
         console.log("SUCCESS");
       }).catch(data => {
@@ -158,12 +276,18 @@ class Database {
   event_updateAttendee(attendeeJSON) {
     // Requires id, value, key
     attendeeJSON['action'] = "UPDATE";
-    attendeeJSON['event_id'] = state.event_id;
+    attendeeJSON['event_id'] = state.currentEvent.id;
     this.apiCall(APICALLS.ATTENDEE_ACTION, attendeeJSON).then(data => {
       console.log("SUCCESS");
     }).catch(data => {
       this.save_apiCall(APICALLS.ATTENDEE_ACTION, attendeeJSON);
     });
+  }
+  event_idToName(event_id) {
+    if (state.id_to_event[event_id] !== null) {
+      return state.id_to_event[event_id];
+    }
+    return emptyEvent;
   }
 
   save_apiCall = (action, params) => {

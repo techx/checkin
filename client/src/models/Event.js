@@ -1,5 +1,7 @@
-function Event(id, name) {
-  this.name = name;
-  this.id = id;
+class Event {
+  constructor(name, id) {
+    this.name = name;
+    this.id = id;
+  }
 }
 export default Event;

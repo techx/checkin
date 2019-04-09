@@ -88,7 +88,7 @@ class App extends Component {
             <Route path="/settings" component={Settings} />
             <Route path="/login" render={(props) => <Login onNameChange={this.updateName} {...props}/>} />
             <Route path="/logout" render={(props) => <Logout onNameChange={this.updateName} {...props}/>} />
-            <Route path="/" render={(props) => <Dashboard alert={this.props.alert} {...props}/>} />/>
+            <Route path="/" component={Dashboard} />
           </Switch>
         </HashRouter>
         <Alert stack={{limit: 3}} />

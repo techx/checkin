@@ -6,4 +6,13 @@ class Constants {
 }
 const CONSTANTS = new Constants();
 
+
+const ALERT_SETTINGS = {
+  position: 'top-right',
+  effect: 'slide',
+  beep: false,
+  timeout: 3000,
+  offset: 100
+};
+
 export default CONSTANTS;

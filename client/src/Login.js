@@ -9,7 +9,7 @@ class Login extends Component {
     this.state = {
       'username': "",
       'password': "",
-      'loggedin': Database.client_loggedIn()
+      'login_status': Database.client_loginStatus()
     }
   }
 
@@ -27,16 +27,16 @@ class Login extends Component {
     event.preventDefault();
     Database.client_login(this.state.username, this.state.password).then((data) => {
       console.log("Logged in");
-      this.setState({ ...this.state, loggedin : true });
+      this.setState({ ...this.state, login_status : 2 });
       this.props.onNameChange(data.name);
     }).catch((e) => {
       console.log("Loggin failed");
-      this.setState({ ...this.state, loggedin : false });
+      this.setState({ ...this.state, login_status : 0 });
     });
   }
 
   render() {
-    if (this.state.loggedin) {
+    if (this.state.login_status > 0) {
       return (<Redirect to='/' />);
     }
     return (
