@@ -15,6 +15,28 @@ class UserCreate(Resource):
                 return createStatus(APIStatus.ERROR_ACTION)
         return createStatus(APIStatus.INCORRECT_DATA)
 
+class UserEvent(Resource):
+    @APIV1.getClient()
+    def post(self, client):
+        if 'params' in request.form:
+            params = json.loads(request.form['params'])
+            if(Database.assignUserEvent(client, params)):
+                return createStatus(APIStatus.SUCCESS)
+            else:
+                return createStatus(APIStatus.ERROR_ACTION)
+        return createStatus(APIStatus.INCORRECT_DATA)
+
+class UserDelete(Resource):
+    @APIV1.getClient()
+    def post(self, client):
+        if 'params' in request.form:
+            params = json.loads(request.form['params'])
+            if(Database.deleteUser(client, params)):
+                return createStatus(APIStatus.SUCCESS)
+            else:
+                return createStatus(APIStatus.ERROR_ACTION)
+        return createStatus(APIStatus.INCORRECT_DATA)
+
 class UserList(Resource):
     @APIV1.getClient()
     def post(self, client):

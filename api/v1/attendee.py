@@ -21,7 +21,7 @@ class AttendeeAction(Resource):
     @APIV1.getClient()
     def post(self, client):
         if 'params' in request.form:
-            success = Database.parseEventAction(client, json.loads(request.form['params']))
+            success = Database.attendeeAction(client, json.loads(request.form['params']))
             if success:
                 return createStatus(APIStatus.SUCCESS)
             else:

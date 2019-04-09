@@ -113,14 +113,13 @@ class Database:
         return client.user.is_admin
 
     @staticmethod
-    def parseEventAction(client, actionDict):
+    def attendeeAction(client, actionDict):
+        # Make sure that you have permissions to modify attendee!
         if any(val not in actionDict for val in ['action', 'event_id']):
             return False
         action = actionDict['action']
         event_id = actionDict['event_id']
         if (action == "ADD"):
-            if any(val not in actionDict for val in ['name']):
-                return False
             event = Database.getEvent(client, event_id)
             if (event is None):
                 return False
@@ -134,6 +133,11 @@ class Database:
                 return False
             return Database_Attendee.updateAttendee(
                 attendee, actionDict['key'], actionDict['value'])
+        elif (action == "DELETE"):
+            event = Database.getEvent(client, event_id)
+            if (event is None):
+                return False
+            return Database_Event.deleteAttendee(event, actionDict)
         return False
 
 
