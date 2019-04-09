@@ -7,7 +7,7 @@ class APIStatus(Enum):
     SUCCESS = 1
     ERROR_AUTH = 2
     ERROR_ACTION = 3
-
+    NO_ADMIN = 8
     NO_POST = 9
     NO_DATA = 10
     INCORRECT_DATA = 11
@@ -33,7 +33,7 @@ def createStatus(status, otherKeys={}):
 
 class APIV1(object):
     @staticmethod
-    def getClient(shouldRet=False):
+    def getClient(shouldRet=True):
         """
         API Get Client from AuthClient
         """
@@ -50,7 +50,7 @@ class APIV1(object):
                 client = authclient.client
                 if client is None:
                     errorStatus = createStatus(APIStatus.ERROR_AUTH, {
-                                               'authErrorCode': authclient.authStatus
+                                               'authErrorCode': authclient.authStatus.name
                                                })
                     if shouldRet:
                         return errorStatus

@@ -18,8 +18,8 @@ class ClientLogin(Resource):
                 errorStatus = createStatus(APIStatus.ERROR_AUTH, {
                                            'authErrorCode': authclient.authStatus
                                            })
-            
-            return createStatus(APIStatus.SUCCESS, {'token': client.token, 'name': client.user.name})
+
+            return createStatus(APIStatus.SUCCESS, {'token': client.token, 'name': client.user.name, 'is_admin': client.user.is_admin})
         return createStatus(APIStatus.INCORRECT_DATA)
     def get(self):
         return createStatus(APIStatus.NO_POST)

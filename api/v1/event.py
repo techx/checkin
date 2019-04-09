@@ -4,21 +4,19 @@ from flask_restful import Resource
 from flask import request
 import json
 
-class UserCreate(Resource):
+class EventCreate(Resource):
     @APIV1.getClient()
     def post(self, client):
         if 'params' in request.form:
             params = json.loads(request.form['params'])
-            if(Database.createUser(client, params)):
+            if(Database.createEvent(client, params)):
                 return createStatus(APIStatus.SUCCESS)
             else:
                 return createStatus(APIStatus.ERROR_ACTION)
         return createStatus(APIStatus.INCORRECT_DATA)
 
-class UserList(Resource):
+class EventList(Resource):
     @APIV1.getClient()
     def post(self, client):
-        users = Database.getUsers(client)
-        if users is None:
-            return createStatus(APIStatus.NO_ADMIN)
-        return createStatus(APIStatus.SUCCESS, {'users': [user.as_dict() for user in users]})
+        events = Database.getEvents(client)
+        return createStatus(APIStatus.SUCCESS, {'events': [event.as_dict() for event in events]})
