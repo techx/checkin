@@ -1,8 +1,10 @@
 from app import db
 from app.models import *
 
+
 class Database:
 
+    ######### USERS ############################################################
     @staticmethod
     def getUsers(client):
         if Database.hasAdminPrivilege(client):
@@ -11,12 +13,58 @@ class Database:
         return None
 
     @staticmethod
+    def createUser(client, params):
+        if any(val not in params for val in ['name', 'username', 'password', 'is_admin']):
+            return False
+        if (Database.hasAdminPrivilege(client)):
+            user = User(
+                params['username'],
+                params['password'],
+                params['name'],
+                params['is_admin']
+            )
+            db.session.add(user)
+            db.session.commit()
+            return True
+        return False
+
+    @staticmethod
+    def deleteUser(client, params):
+        if any(val not in params for val in ['id']):
+            return False
+        if (Database.hasAdminPrivilege(client)):
+            user = User.query.get(params['id'])
+            if user is not None:
+                db.session.delete(user)
+                db.session.commit()
+                return True
+        return False
+
+    @staticmethod
+    def assignUserEvent(client, params):
+        if any(val not in params for val in ['id', 'event_id', 'assignment']):
+            return False
+        if (Database.hasAdminPrivilege(client)):
+            user = User.query.get(params['id'])
+            event = Event.query.get(params['event_id'])
+            if user is not None and event is not None:
+                if params['assignment']:
+                    user.events.append(event)
+                else:
+                    user.events.remove(event)
+                db.session.commit()
+                return True
+        return False
+
+    ######### EVENTS ###########################################################
+    @staticmethod
     def getEvents(client):
         events = client.user.events
         if Database.hasAdminPrivilege(client):
             # Admin root bits!
             events = Event.query.all()
         return events
+
     @staticmethod
     def getEvent(client, event_id):
         """
@@ -29,31 +77,6 @@ class Database:
         return event
 
     @staticmethod
-    def getAttendee(client, event_id, attendee_id):
-        attendee = Attendee.query.get(attendee_id)
-        event = Database.getEvent(client, event_id)
-        if event is not None:
-            return attendee
-        return None
-
-    @staticmethod
-    def hasAdminPrivilege(client):
-        return client.user.is_admin
-
-    @staticmethod
-    def createUser(client, params):
-        if any(val not in params for val in ['name', 'username', 'password', 'is_admin']):
-            return False
-        if (Database.hasAdminPrivilege(client)):
-            print(params)
-            user = User(
-                params['username'], params['password'], params['name'], params['is_admin'])
-            db.session.add(user)
-            db.session.commit()
-            return True
-        return False
-
-    @staticmethod
     def createEvent(client, params):
         if any(val not in params for val in ['name', 'time']):
             return False
@@ -64,6 +87,30 @@ class Database:
             db.session.commit()
             return True
         return False
+
+    @staticmethod
+    def deleteEvent(client, params):
+        if any(val not in params for val in ['id']):
+            return False
+        if (Database.hasAdminPrivilege(client)):
+            event = Event.query.get(params['id'])
+            if event is not None:
+                db.session.delete(event)
+                db.session.commit()
+                return True
+        return False
+    ######### ATTENDEE #########################################################
+    @staticmethod
+    def getAttendee(client, event_id, attendee_id):
+        attendee = Attendee.query.get(attendee_id)
+        event = Database.getEvent(client, event_id)
+        if event is not None:
+            return attendee
+        return None
+
+    @staticmethod
+    def hasAdminPrivilege(client):
+        return client.user.is_admin
 
     @staticmethod
     def parseEventAction(client, actionDict):
@@ -89,6 +136,7 @@ class Database:
                 attendee, actionDict['key'], actionDict['value'])
         return False
 
+
 class Database_Event(object):
     @staticmethod
     def createAttendee(event, actionDict):
@@ -98,14 +146,31 @@ class Database_Event(object):
             print("no duplicate users allowed")
             return True
         attendee = Attendee(
-            event, actionDict['name'], actionDict['scan_value'], actionDict['email'], actionDict['school'], actions=actionDict['tags'], checkin_status=actionDict['checkin_status'])
+            event,
+            actionDict['name'],
+            actionDict['scan_value'],
+            actionDict['email'],
+            actionDict['school'],
+            tags=actionDict['tags'],
+            checkin_status=actionDict['checkin_status']
+        )
         db.session.add(attendee)
         db.session.commit()
         return True
 
+    @staticmethod
+    def deleteAttendee(event, actionDict):
+        if any(val not in params for val in ['id']):
+            return False
+        attendee = Attendee.query.get(params['id'])
+        if attendee is not None:
+            db.session.delete(attendee)
+            db.session.commit()
+            return True
+        return False
+
 
 class Database_Attendee(object):
-
     @staticmethod
     def updateAttendee(attendee, key, update_value):
         if key == "CHECKIN":
@@ -123,7 +188,8 @@ class Database_Attendee(object):
             if (";" in update_value):
                 return False
             if ((update_value + ";") in attendee.actions):
-                attendee.actions = attendee.actions.replace(update_value + ";", "")
+                attendee.actions = attendee.actions.replace(
+                    update_value + ";", "")
         else:
             return False
         db.session.commit()
