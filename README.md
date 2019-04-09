@@ -1,6 +1,8 @@
 # checkin
 hackMIT checkin
 
+# STATUS: still in progress (in development)
+
 This will be updated soon with instructions on how to install everything!
 
 
