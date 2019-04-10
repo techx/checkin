@@ -1,12 +1,12 @@
 class Attendee {
-  constructor(name, scan_value, email, school, checkin_status=0, notes="", actions="", id=0) {
+  constructor(name, scan_value, email, school, checkin_status=0, tags="", id=0, notes="") {
     this.name = name;
     this.scan_value = scan_value;
     this.email = email;
     this.school = school;
     this.notes = notes;
     this.checkin_status = checkin_status;
-    this.tags = actions;
+    this.tags = tags;
     this.id = id;
   }
 

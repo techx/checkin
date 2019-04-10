@@ -61,10 +61,6 @@ class Login extends Component {
       </Container>
     );
   }
-
-  onSubmit(e) {
-    e.preventDefault();
-  }
 }
 
 class Logout extends Component {

@@ -1,6 +1,7 @@
 from app import db
 import datetime
 from app.helpers.passwords import *
+from dateutil import parser
 
 class Event(db.Model):
     __tablename__ = 'events'
@@ -14,8 +15,8 @@ class Event(db.Model):
 
     attendees = db.relationship("Attendee", back_populates='event')
 
-    def __init__(self, name, time):
+    def __init__(self, name, datestring):
         self.name = name
-        self.time = time
+        self.time = parser.parse(datestring)
     def as_dict(self):
         return {c.name: str(getattr(self, c.name)) if getattr(self, c.name) is not None else None for c in self.__table__.columns}

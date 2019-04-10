@@ -9,6 +9,7 @@ import Constants from "./Constants";
 import ReactTable from "react-table";
 import Popup from "reactjs-popup";
 import Attendee from "./models/Attendee";
+import EasyAccess from "./EasyAccess";
 import 'react-table/react-table.css';
 import 'react-s-alert/dist/s-alert-default.css';
 import 'react-s-alert/dist/s-alert-css-effects/slide.css';
@@ -32,7 +33,7 @@ class Dashboard extends Component {
       'filteredAttendees': [],
       'applyDisabled': true,
       'view_confirmApply': false,
-      'attendee': new Attendee("", "", "", ""),
+      'currentAttendee': new Attendee("", "", "", ""),
       'day': 1
     };
     fetch(LABEL_URL).then((response) => response.text()).then((result) => {
@@ -69,23 +70,6 @@ class Dashboard extends Component {
     document.removeEventListener("keydown", this._handleKeyDown);
   }
 
-  previousPage = (e) => {
-    e.preventDefault();
-
-    this.setState({
-      ...this.state,
-      'page': Math.max(0, this.state.page - 1)
-    });
-  }
-
-  nextPage = (e) => {
-    e.preventDefault();
-
-    this.setState({
-      ...this.state,
-      'page': this.state.page + 1
-    });
-  }
   refreshPrinters = () => {
     this.setState({
       ...this.state,
@@ -205,17 +189,20 @@ class Dashboard extends Component {
       }
     }
   }
+  updateApplyFunction = (state) => {
+    this.setState(state);
+  }
   applyFunctionConfirm = (attendee) => {
     this.setState({
       'view_confirmApply': true,
-      'attendee': attendee
+      'currentAttendee': attendee
     });
   }
   popupClose = () => {
     this.setState({ 'view_confirmApply': false });
   }
   applyFunctionActual = () => {
-    const attendee = this.state.attendee;
+    const attendee = this.state.currentAttendee;
     var tags = this.state.tags.split(",");
     var attendeeJSON;
     if (this.state.checkin === "checkin") {
@@ -291,13 +278,13 @@ class Dashboard extends Component {
         Cell: props => <Button onClick={(e) => this.applyFunctionConfirm(props.original)}
           disabled={this.state.applyDisabled} color='danger'>
           Apply
-            {/*<FontAwesomeIcon icon="user-check" />*/}
-        </Button> // Custom cell components!
+        </Button>
       }];
       let printerOptions = this.state.printers.map((printer) => <option key={printer.name} value={printer.name}>{printer.name}</option>);
       return (
         <Container>
           <br />
+          <EasyAccess updateApplyFunction={this.updateApplyFunction}/>
           <Col>
             <InputGroup>
               <InputGroupAddon addonType="prepend">
@@ -342,7 +329,7 @@ class Dashboard extends Component {
           <Popup open={this.state.view_confirmApply} modal onClose={this.popupClose}>
             <Container>
               <center>
-                <h2>Confirm for {this.state.attendee.name}</h2>
+                <h2>Confirm for {this.state.currentAttendee.name}</h2>
               </center>
               <br />
               <p> Checkin: {this.state.checkin} for DAY {this.state.day}</p>

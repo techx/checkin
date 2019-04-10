@@ -42,13 +42,14 @@ class Database:
 
     @staticmethod
     def assignUserEvent(client, params):
-        if any(val not in params for val in ['id', 'event_id', 'assignment']):
+        print(params)
+        if any(val not in params for val in ['id', 'event_id', 'assign']):
             return False
         if (Database.hasAdminPrivilege(client)):
             user = User.query.get(params['id'])
             event = Event.query.get(params['event_id'])
             if user is not None and event is not None:
-                if params['assignment']:
+                if params['assign']:
                     user.events.append(event)
                 else:
                     user.events.remove(event)
@@ -81,7 +82,7 @@ class Database:
         if any(val not in params for val in ['name', 'time']):
             return False
         if (Database.hasAdminPrivilege(client)):
-            event = Event(name=params['name'], time=params['time'])
+            event = Event(name=params['name'], datestring=params['time'])
             client.user.events.append(event)
             db.session.add(event)
             db.session.commit()
@@ -95,6 +96,8 @@ class Database:
         if (Database.hasAdminPrivilege(client)):
             event = Event.query.get(params['id'])
             if event is not None:
+                query = db.session.query(UserEvents).filter(UserEvents.c.event_id==event.id)
+                query.delete(synchronize_session=False)
                 db.session.delete(event)
                 db.session.commit()
                 return True
@@ -186,13 +189,13 @@ class Database_Attendee(object):
         elif key == "ACTION":
             if (";" in update_value):
                 return False
-            if (update_value not in attendee.actions):
-                attendee.actions += update_value + ";"
+            if (update_value not in attendee.tags):
+                attendee.tags += update_value + ";"
         elif key == "UNACTION":
             if (";" in update_value):
                 return False
-            if ((update_value + ";") in attendee.actions):
-                attendee.actions = attendee.actions.replace(
+            if ((update_value + ";") in attendee.tags):
+                attendee.tags = attendee.tags.replace(
                     update_value + ";", "")
         else:
             return False

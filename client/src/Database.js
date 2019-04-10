@@ -18,8 +18,23 @@ const APICALLS = {
     method: "POST",
     requiresToken: true
   },
+  EVENT_DELETE: {
+    url: "events/delete",
+    method: "POST",
+    requiresToken: true
+  },
   USER_CREATE: {
     url: "users/create",
+    method: "POST",
+    requiresToken: true
+  },
+  USER_DELETE: {
+    url: "users/delete",
+    method: "POST",
+    requiresToken: true
+  },
+  USER_ASSIGNEVENT: {
+    url: "users/events/push",
     method: "POST",
     requiresToken: true
   },
@@ -202,8 +217,20 @@ class Database {
     return this.apiCall(APICALLS.USER_CREATE, params);
   }
 
+  client_deleteUser(params) {
+    return this.apiCall(APICALLS.USER_DELETE, params);
+  }
+
   client_createEvent(params) {
     return this.apiCall(APICALLS.EVENT_CREATE, params);
+  }
+
+  client_deleteEvent(params) {
+    return this.apiCall(APICALLS.EVENT_DELETE, params);
+  }
+
+  client_updateUserEventAssignment(params) {
+    return this.apiCall(APICALLS.USER_ASSIGNEVENT, params);
   }
 
   client_getUsers() {
@@ -250,7 +277,7 @@ class Database {
         var searchResults = [];
         for (var v = 0; v < result.attendees.length; v += 1) {
           var atd = result.attendees[v];
-          var attendee = new Attendee(atd.name, atd.scan_value, atd.email, atd.school, atd.checkin_status, atd.notes, atd.actions, atd.id);
+          var attendee = new Attendee(atd.name, atd.scan_value, atd.email, atd.school, atd.checkin_status, atd.tags, atd.id, atd.notes);
           searchResults.push(attendee);
         }
         resolve(searchResults);

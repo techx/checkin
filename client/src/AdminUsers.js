@@ -22,7 +22,8 @@ class AdminUsers extends Component {
       password_confirm: '',
       is_admin: false,
       currentUser: noUser,
-      user_action: 'delete'
+      user_action: 'delete',
+      event_id: ''
     }
     this.getUsers();
   }
@@ -67,13 +68,42 @@ class AdminUsers extends Component {
     }
     Alert.success("Creating user " + this.state.username.trim(), ALERT_SETTINGS);
     var params = {'name': this.state.name.trim(), 'password': this.state.password.trim(), 'username': this.state.username.trim(), 'is_admin': this.state.is_admin}
-    Database.client_createUser(params).catch(() => {
+    Database.client_createUser(params).then(()=>{
+      Alert.success("Created user " + this.state.username.trim(), ALERT_SETTINGS);
+      this.getUsers();
+    }).catch(() => {
       Alert.error("Couldn't create user " + this.state.username.trim(), ALERT_SETTINGS);
     });
   }
 
   applyFunction = () => {
-    Alert.error("Can't delete through client yet");
+    const user = this.state.currentUser;
+    var userJSON;
+    if (this.state.user_action === "delete" && window.confirm("Are you sure you want to delete a user?")) {
+      userJSON = { id: user.id };
+      Database.client_deleteUser(userJSON).then(()=>{
+        Alert.success("Deleted user " + this.state.username.trim(), ALERT_SETTINGS);
+        this.getUsers();
+      }).catch(() => {
+        Alert.error("Couldn't delete user " + this.state.username.trim(), ALERT_SETTINGS);
+      });
+    } else if (this.state.user_action === "assign") {
+      userJSON = { id: user.id, event_id: this.state.event_id, assign: true };
+      Database.client_updateUserEventAssignment(userJSON).then(()=>{
+        Alert.success("Assigned user " + this.state.username.trim(), ALERT_SETTINGS);
+        this.getUsers();
+      }).catch(() => {
+        Alert.error("Couldn't assign user " + this.state.username.trim(), ALERT_SETTINGS);
+      });
+    } else if (this.state.user_action === "unassign") {
+      userJSON = { id: user.id, event_id: this.state.event_id, assign: false };
+      Database.client_updateUserEventAssignment(userJSON).then(()=>{
+        Alert.success("Unssigned user " + this.state.username.trim(), ALERT_SETTINGS);
+        this.getUsers();
+      }).catch(() => {
+        Alert.error("Couldn't unassign user " + this.state.username.trim(), ALERT_SETTINGS);
+      });
+    }
   }
 
   selectUser = (user) => {
@@ -103,10 +133,6 @@ class AdminUsers extends Component {
     ];
     return (
         <Container>
-          <Button id="PopoverAddUser" type="button">
-            Add User
-          </Button>
-          <Button onClick={this.getUsers}> Force Refresh </Button>
         <UncontrolledPopover trigger="legacy" placement="bottom" target="PopoverAddUser">
           <PopoverHeader>More Options</PopoverHeader>
           <PopoverBody>
@@ -134,16 +160,32 @@ class AdminUsers extends Component {
                 <Input addon type='checkbox' name="is_admin" checked={this.state.is_admin} onChange={this.handleChange} />
                 </InputGroupText>
               </InputGroup>
-              <Button onClick={this.createUser} > Create </Button>
+              <InputGroup>
+                <Button onClick={this.createUser} > Create </Button>
+              </InputGroup>
             </FormGroup>
           </PopoverBody>
         </UncontrolledPopover>
         <Col>
-        Selected User: {this.state.currentUser.name}
-        <CustomInput id="user_options" type="select" name="action" value={this.state.user_action} onChange={this.handleChange}>
-          <option value="delete">Delete User</option>
-        </CustomInput>
-        <Button onClick={this.applyFunction}> Apply Function </Button>
+
+          <InputGroup>
+            <InputGroupAddon addonType="prepend">
+            <InputGroupText> Selected User: {this.state.currentUser.name} </InputGroupText>
+          </InputGroupAddon>
+            <InputGroupAddon>
+              <CustomInput id="user_options" type="select" name="user_action" value={this.state.user_action} onChange={this.handleChange}>
+                <option value="delete">Delete User</option>
+                <option value="assign">Assign Event</option>
+                <option value="unassign">Unassign Event</option>
+              </CustomInput>
+            </InputGroupAddon>
+            <Input name="event_id" value={this.state.event_id} placeholder="event id (only for assign and unassign events)"  onChange={this.handleChange}/>
+              <Button disabled={this.state.currentUser === noUser} color="info" onClick={this.applyFunction}> Apply Function </Button>
+              <Button id="PopoverAddUser" type="button">
+                Add User
+              </Button>
+              <Button onClick={this.getUsers}> Force Refresh </Button>
+          </InputGroup>
         </Col>
           <Col>
             {/* Actual Results */}
