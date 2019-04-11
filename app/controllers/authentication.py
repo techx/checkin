@@ -16,7 +16,7 @@ class Auth:
         """
         user = User.query.filter_by(username=username).first()
         if user is None or not verify_password(user.password, password):
-            raise AuthClient(AuthStatus.LOGIN_INCORRECT)
+            return AuthClient(AuthStatus.LOGIN_INCORRECT)
         token = generate_token()
         while (len(Client.query.filter_by(token=token).all()) > 0):
             token = generate_token()
