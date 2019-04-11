@@ -155,8 +155,12 @@ class Database {
     return state.login_status > 0;
   }
 
-  client_loginStatus() {
-    return state.login_status;
+  client_connected() {
+    return state.login_status === 2;
+  }
+
+  client_offline() {
+    return state.login_status === 1;
   }
 
   client_name() {
@@ -204,6 +208,9 @@ class Database {
 
   client_currentEvent() {
     return state.currentEvent;
+  }
+  client_isEmptyEvent() {
+    return state.currentEvent === emptyEvent;
   }
   client_updateEventId(event_id) {
     var events = JSON.parse(window.localStorage.getItem('events')) || [];

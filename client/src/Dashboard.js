@@ -37,14 +37,14 @@ class Dashboard extends Component {
       'day': 1
     };
     if (Database.client_loggedIn()) {
-      if (Database.client_currentEvent().id !== 0) {
+      if (!Database.client_isEmptyEvent()) {
         fetch(LABEL_URL).then((response) => response.text()).then((result) => {
           this.printLabelXml = result;
         }).catch((e) => {
         });
         this.getAttendees();
       }
-      if(Database.client_loginStatus() === 1) {
+      if(Database.client_offline()) {
         Alert.error("Can't connect to server", ALERT_SETTINGS);
       }
     }
@@ -267,7 +267,7 @@ class Dashboard extends Component {
 
   render() {
     if (Database.client_loggedIn()) {
-      if (Database.client_currentEvent().id === 0) {
+      if (Database.client_isEmptyEvent()) {
         Alert.error("Choose an event", ALERT_SETTINGS);
         return (<Redirect to="/settings" />)
       }

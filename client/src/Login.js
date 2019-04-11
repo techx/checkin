@@ -2,6 +2,7 @@ import React, { Component } from 'react';
 import { Redirect } from "react-router-dom";
 import { Col, Button, Form, FormGroup, Label, Input, Container } from 'reactstrap';
 import Database from './Database';
+import Constants from './Constants';
 
 class Login extends Component {
   constructor(props) {
@@ -27,8 +28,10 @@ class Login extends Component {
     Database.client_login(this.state.username, this.state.password).then((data) => {
       console.log("Logged in");
       this.props.onNameChange(data.name);
+      Constants.AlertSuccess("Login Success!");
     }).catch((e) => {
       console.log("Loggin failed");
+      Constants.AlertError("Login Failed");
     });
   }
 

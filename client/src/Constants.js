@@ -10,6 +10,9 @@ class Constants {
   AlertWarning = (message) => {
     Alert.warning(message, ALERT_SETTINGS);
   };
+  AlertError = (message) => {
+    Alert.error(message, ALERT_SETTINGS);
+  };
 }
 const CONSTANTS = new Constants();
 

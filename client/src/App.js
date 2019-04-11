@@ -58,7 +58,7 @@ class App extends Component {
         <HashRouter>
           <Navbar color="light" light expand="md">
             <Container>
-              <NavbarBrand>HACK Checkin!</NavbarBrand>
+              <NavbarBrand>HACK Checkin! v0.1</NavbarBrand>
               <NavbarToggler onClick={this.toggle} />
               <Collapse isOpen={this.state.isOpen} navbar>
                 <Nav navbar>
