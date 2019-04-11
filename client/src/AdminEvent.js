@@ -27,11 +27,10 @@ class AdminEvent extends Component {
   getEvents = () => {
     Database.user_getEvents().then((result) => {
       this.setState({ 'events': result });
-      Alert.success("Events loaded", ALERT_SETTINGS);
     }).catch((result) => {
       console.log("could not fetch users; loading backup");
       this.setState({ 'events': result });
-      Alert.warning("Events loaded from backup", ALERT_SETTINGS);
+      Alert.warning("Events loaded from backup (offline)", ALERT_SETTINGS);
     });
   }
   uploadQuillUsers = () => {
@@ -99,10 +98,16 @@ class AdminEvent extends Component {
     return (
         <Container>
           <Col>
-          <p> Event: <Input type="select" name="event" onChange={this.handleEventChange} value={this.state.event_id}>
-            {events}
-          </Input><Button onClick={this.getEvents}> Force Refresh </Button></p>
-
+          <FormGroup>
+            <InputGroup><InputGroupAddon addonType="prepend">
+            <InputGroupText> Event: </InputGroupText>
+          </InputGroupAddon>
+            <Input type="select" name="event" onChange={this.handleEventChange} value={this.state.event_id}>
+              {events}
+            </Input>
+              <Button onClick={this.getEvents}> Force Refresh </Button>
+            </InputGroup>
+          </FormGroup>
           </Col>
           Bulk Add from Quill Attendees:
           <Input type='file'

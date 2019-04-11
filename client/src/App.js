@@ -39,7 +39,6 @@ class App extends Component {
   }
 
   componentWillMount() {
-    console.log("MOUNT");
     this.setState({
       ...this.state,
       name: Database.client_name()

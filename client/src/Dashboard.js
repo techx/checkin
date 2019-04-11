@@ -36,13 +36,17 @@ class Dashboard extends Component {
       'currentAttendee': new Attendee("", "", "", ""),
       'day': 1
     };
-    fetch(LABEL_URL).then((response) => response.text()).then((result) => {
-      this.printLabelXml = result;
-    }).catch((e) => {
-    });
-    this.getAttendees();
-    if(Database.client_loginStatus() === 1) {
-      Alert.error("Can't connect to server", ALERT_SETTINGS);
+    if (Database.client_loggedIn()) {
+      if (Database.client_currentEvent().id !== 0) {
+        fetch(LABEL_URL).then((response) => response.text()).then((result) => {
+          this.printLabelXml = result;
+        }).catch((e) => {
+        });
+        this.getAttendees();
+      }
+      if(Database.client_loginStatus() === 1) {
+        Alert.error("Can't connect to server", ALERT_SETTINGS);
+      }
     }
   }
 
@@ -245,10 +249,11 @@ class Dashboard extends Component {
 
 
   render() {
-    if (Database.client_currentEvent().id === 0) {
-      return (<Redirect to="/settings" />)
-    }
     if (Database.client_loggedIn()) {
+      if (Database.client_currentEvent().id === 0) {
+        Alert.error("Choose an event", ALERT_SETTINGS);
+        return (<Redirect to="/settings" />)
+      }
       const columns = [{ Header: 'Name', accessor: 'name' },
       { Header: 'School', accessor: 'school' },
       { Header: 'Email', accessor: 'email' },
@@ -368,6 +373,7 @@ class Dashboard extends Component {
         </Container>
       );
     } else {
+      Alert.error("Need to login", ALERT_SETTINGS);
       return (<Redirect to="/login" />)
     }
   }

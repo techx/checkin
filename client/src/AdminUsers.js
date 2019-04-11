@@ -23,19 +23,30 @@ class AdminUsers extends Component {
       is_admin: false,
       currentUser: noUser,
       user_action: 'delete',
-      event_id: ''
+      event_id: '',
+      events: []
     }
     this.getUsers();
+    this.getEvents();
   }
   getUsers = () => {
     // Remove the first result as it is a "no event"
     Database.client_getUsers().then((result) => {
       this.setState({ 'users': result });
-      Alert.success("Users loaded", ALERT_SETTINGS);
     }).catch((result) => {
       console.log("could not fetch users; loading backup");
       this.setState({ 'users': result });
       Alert.warning("Users loaded from backup", ALERT_SETTINGS);
+    });
+  }
+
+  getEvents = () => {
+    Database.user_getEvents().then((result) => {
+      this.setState({ 'events': result });
+    }).catch((result) => {
+      console.log("could not fetch users; loading backup");
+      this.setState({ 'events': result });
+      Alert.warning("Events loaded from backup", ALERT_SETTINGS);
     });
   }
 
@@ -110,6 +121,7 @@ class AdminUsers extends Component {
     this.setState({currentUser: user});
   }
   render () {
+    let events = this.state.events.map((event, index) =>  <option key={event.id} value={event.id}>{event.name}</option>);
     const users_columns = [{ Header: 'Name', accessor: 'name' },
       { Header: 'Id', accessor: 'id' },
       { Header: 'Is Admin', accessor: 'is_admin', Cell: row => {
@@ -134,7 +146,7 @@ class AdminUsers extends Component {
     return (
         <Container>
         <UncontrolledPopover trigger="legacy" placement="bottom" target="PopoverAddUser">
-          <PopoverHeader>More Options</PopoverHeader>
+          <PopoverHeader>Create User</PopoverHeader>
           <PopoverBody>
 
             <FormGroup>
@@ -179,9 +191,11 @@ class AdminUsers extends Component {
                 <option value="unassign">Unassign Event</option>
               </CustomInput>
             </InputGroupAddon>
-            <Input name="event_id" value={this.state.event_id} placeholder="event id (only for assign and unassign events)"  onChange={this.handleChange}/>
+            <Input type="select" name="event_id" onChange={this.handleChange} value={this.state.event_id}>
+              {events}
+            </Input>
               <Button disabled={this.state.currentUser === noUser} color="info" onClick={this.applyFunction}> Apply Function </Button>
-              <Button id="PopoverAddUser" type="button">
+              <Button id="PopoverAddUser" type="button" color="primary">
                 Add User
               </Button>
               <Button onClick={this.getUsers}> Force Refresh </Button>

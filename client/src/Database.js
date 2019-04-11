@@ -170,8 +170,14 @@ class Database {
   client_logout() {
     state.login_status = 0;
     state.name = '';
-    window.localStorage.setItem('token', "");
-    window.localStorage.setItem('name', "");
+    window.localStorage.removeItem('token');
+    window.localStorage.removeItem('name');
+    window.localStorage.removeItem('attendees');
+    window.localStorage.removeItem('events');
+    window.localStorage.removeItem('users');
+    window.localStorage.removeItem('event');
+    window.localStorage.removeItem('is_admin');
+    window.localStorage.removeItem('actions');
   }
 
   client_login(username, password) {
@@ -207,8 +213,8 @@ class Database {
     }
     window.localStorage.setItem('event', JSON.stringify(event));
     if (state.currentEvent !== event) {
-      // TODO:
-      // window.localStorage.setItem('attendees', JSON.stringify([]));
+      window.localStorage.removeItem('attendees');
+      this.event_getAttendees();
     }
     state.currentEvent = event;
   }

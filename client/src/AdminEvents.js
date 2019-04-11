@@ -29,7 +29,6 @@ class AdminEvents extends Component {
     // Remove the first result as it is a "no event"
     Database.user_getEvents().then((result) => {
       this.setState({ 'events': result.splice(1) });
-      Alert.success("Events loaded", ALERT_SETTINGS);
     }).catch((result) => {
       console.log("could not fetch users; loading backup");
       this.setState({ 'events': result.splice(1) });
@@ -97,7 +96,7 @@ class AdminEvents extends Component {
         <Container>
 
         <UncontrolledPopover trigger="legacy" placement="bottom" target="PopoverAddEvent">
-          <PopoverHeader>More Options</PopoverHeader>
+          <PopoverHeader>Create Event</PopoverHeader>
           <PopoverBody>
 
             <FormGroup>
@@ -106,7 +105,7 @@ class AdminEvents extends Component {
                 <Input name='name' value={this.state.name} onChange={this.handleChange} />
               </InputGroup>
               <InputGroup>
-                <InputGroupAddon addonType="prepend">Time:</InputGroupAddon>
+                <InputGroupAddon addonType="prepend">Parsable Time:</InputGroupAddon>
                 <Input name="time" value={this.state.time} onChange={this.handleChange} />
               </InputGroup>
               </FormGroup>
@@ -123,7 +122,7 @@ class AdminEvents extends Component {
           </InputGroupAddon>
           <Button disabled={this.state.currentEvent === noEvent} color="info" onClick={this.applyFunction}> Apply Function </Button>
 
-              <Button id="PopoverAddEvent" type="button">
+              <Button id="PopoverAddEvent" type="button" color="primary">
                 Create Event
               </Button>
               <Button onClick={this.getEvents}> Force Refresh </Button>
