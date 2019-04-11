@@ -127,7 +127,7 @@ class AdminEvent extends Component {
             inputStyle={{color: 'black'}}
           />
         <p> Total number of users: {this.state.add_potentialUsers.length} </p>
-        <Input type='submit' onClick={this.uploadQuillUsers}>Add All Users</Input>
+        <Button onClick={this.uploadQuillUsers}>Add All Users</Button>
         </Container>
     )
   }

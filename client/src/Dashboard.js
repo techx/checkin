@@ -86,17 +86,22 @@ class Dashboard extends Component {
       [event.target.name]: (event.target.type === "checkbox") ? event.target.checked : event.target.value
     }, () => {
       // Check to enable applyDisabled
-      if (this.state.checkin !== "doing nothing" || this.state.tags.length > 0 || this.state.printerName !== Constants.DONT_PRINT_NAME) {
-        this.setState({
-          'applyDisabled': false
-        });
-      } else {
-        this.setState({
-          'applyDisabled': true
-        });
-      }
+      this.updateApplyDisabled();
     });
   }
+
+  updateApplyDisabled = () => {
+    if (this.state.checkin !== "doing nothing" || this.state.tags.length > 0 || this.state.printerName !== Constants.DONT_PRINT_NAME) {
+      this.setState({
+        'applyDisabled': false
+      });
+    } else {
+      this.setState({
+        'applyDisabled': true
+      });
+    }
+  }
+
   print = (attendee) => {
     if (this.state.printerName === Constants.DONT_PRINT_NAME) {
       return;
@@ -194,9 +199,21 @@ class Dashboard extends Component {
     }
   }
   updateApplyFunction = (state) => {
-    this.setState(state);
+    this.setState(state, () => {
+      this.updateApplyDisabled();
+    });
   }
   applyFunctionConfirm = (attendee) => {
+    var tags = this.state.tags.split(",");
+    if (this.state.checkin === "checkin" && !attendee.updateCheckin(this.state.day, true, true)) {
+      Constants.AlertWarning("User has already checked in");
+    }
+    if (this.state.checkin === "uncheckin" && !attendee.updateCheckin(this.state.day, false, true)) {
+      Constants.AlertWarning("User has not been checked in");
+    }
+    if (tags.length > 0 && !attendee.updateTags(tags, true)) {
+      Constants.AlertWarning("Tag already exists");
+    }
     this.setState({
       'view_confirmApply': true,
       'currentAttendee': attendee
@@ -285,7 +302,7 @@ class Dashboard extends Component {
           Apply
         </Button>
       }];
-      let printerOptions = this.state.printers.map((printer) => <option key={printer.name} value={printer.name}>{printer.name}</option>);
+      let printerOptions = this.state.printers.map((printer,index) => <option key={index} value={printer.name}>{printer.name}</option>);
       return (
         <Container>
           <br />
@@ -299,9 +316,9 @@ class Dashboard extends Component {
               </InputGroupAddon>
               <InputGroupAddon addonType="prepend">
                 <CustomInput id="checkin_input" type="select" name="checkin" value={this.state.checkin} onChange={this.handleChange}>
-                  <option value="doing nothing">No Action</option>
-                  <option value="checkin">Checkin</option>
-                  <option value="uncheckin">unCheckin</option>
+                  <option key="1" value="doing nothing">No Action</option>
+                  <option key="2" value="checkin">Checkin</option>
+                  <option key="3" value="uncheckin">unCheckin</option>
                 </CustomInput>
               </InputGroupAddon>
               <Input placeholder="Tags separated by commas (i.e. swag, !swag remove tags)"

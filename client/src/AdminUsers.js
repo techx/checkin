@@ -184,11 +184,11 @@ class AdminUsers extends Component {
             <InputGroupAddon addonType="prepend">
             <InputGroupText> Selected User: {this.state.currentUser.name} </InputGroupText>
           </InputGroupAddon>
-            <InputGroupAddon>
+            <InputGroupAddon addonType="append">
               <CustomInput id="user_options" type="select" name="user_action" value={this.state.user_action} onChange={this.handleChange}>
-                <option value="delete">Delete User</option>
-                <option value="assign">Assign Event</option>
-                <option value="unassign">Unassign Event</option>
+                <option key="1" value="delete">Delete User</option>
+                <option key="2" value="assign">Assign Event</option>
+                <option key="3" value="unassign">Unassign Event</option>
               </CustomInput>
             </InputGroupAddon>
             <Input type="select" name="event_id" onChange={this.handleChange} value={this.state.event_id}>

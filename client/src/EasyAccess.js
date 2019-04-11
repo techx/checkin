@@ -34,10 +34,10 @@ class EasyAccess extends Component {
         <InputGroup>
           <InputGroupAddon addonType="prepend">
             <Button onClick={this.clickSwag}>
-              Swag!
+              Add Swag!
             </Button>
             <Button onClick={this.clickCheckin}>
-              Checkin!
+              Add Checkin!
             </Button>
           </InputGroupAddon>
           <InputGroupAddon addonType="append">

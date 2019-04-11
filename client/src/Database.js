@@ -2,7 +2,7 @@ import Constants from "./Constants";
 import Attendee from "./models/Attendee";
 import Event from "./models/Event";
 import User from "./models/User";
-const emptyEvent = new Event("No selected event", 0);
+const emptyEvent = new Event("No selected event", "0");
 const state = {
   login_status: 0,
   token: "",
