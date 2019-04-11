@@ -1,3 +1,4 @@
+
 # Setting up database
 
 0) install python dependencies `pip install -r requirements.txt`
@@ -7,13 +8,13 @@
  `sudo su`
  `update-rc.d postgresql enable`
  `service postgresql start`
- `su - postgres`
- `psql postgres`
- `CREATE DATABASE checkin_dev;`
-3) `adduser checkin`
-5) `createuser --interactive --pwprompt`
-4) `sudo su - checkin`
-5) Clone repo
+3) `adduser checkin` <b> For ubuntu </b>
+5) `sudo -u postgres createuser checkin`
+6) `sudo -u postgres createdb <dbname>`
+7) `sudo -u postgres psql`
+`alter user checkin with encrypted password '<password>';`
+`grant all privileges on database <dbname> to checkin ;`
+8) Clone repo
 10) Update your `config.py` file (`SQLALCHEMY_DATABASE_URI`)
 11) Run `python manage.py db init`
 12) Run `python manage.py db migrate`
@@ -27,42 +28,46 @@
 You're all set! Now it's time to use the online interface!
 (But you can just mess around with start_script as well)
 
-# Start server
+# Local Testing
 
 9) Run `python runserver.py` or python3 since we require python3 to run
+10) cd into `client` and run `yarn start`
 
 
 # Setup on Amazon EC2 instance with nginx
 
 This server works best with Nginx with a service to run the server backend
+Using supervisor to control service
 
-Create file in `/lib/systemd/system/checkin.service`
-Chmod the file `sudo chmod 644 /lib/systemd/system/checkin.service`
-`sudo systemctl daemon-reload`
-`sudo systemctl enable checkin.service`
 
-  [Unit]
-  Description=checkin
-  After=network.target
+### Install supervisor
 
-  [Service]
-  Type=simple
-  User=checkin
-  EnvironmentFile=/home/checkin/checkin/environment
-  ExecStart=/usr/bin/python /home/checkin/checkin/runserver.py
-  WorkingDirectory=/home/checkin/checkin
-  Restart=always
+`sudo apt install supervisor`
 
-  [Install]
-  WantedBy=multi-user.target
+`sudo mkdir /var/log/checkin`
+Add to `/etc/supervisord/conf.d/checkin.conf`
+```
+[program:checkin]                                                                  
+command = /home/checkin/env/bin/python runserver.py PRODUCTION                                  
+directory = /home/checkin/checkin
+autostart = true                 
+autorestart = true
+user = checkin
+stderr_logfile=/var/log/checkin/checkin.err.log
+stdout_logfile=/var/log/checkin/checkin.out.log
+```
 
-Also you can change your ExecStart to match your virtualEnv
+Then run `sudo supervisorctl reread`
+`sudo service supervisor restart`
 
+### For nginx
+```
   location /api/ {
-    proxy_pass http://127.0.0.1:5000/;
+    proxy_pass http://127.0.0.1:5000/api/;
     proxy_set_header X-Real-IP $remote_addr;
   }
   location / {
     root /home/checkin/checkin/build;
     try_files $uri $uri/ =404;
   }
+```
