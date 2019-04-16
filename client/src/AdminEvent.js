@@ -20,21 +20,22 @@ class AdminEvent extends Component {
       add_potentialUsers: [],
       event_id: Database.client_currentEvent().id
     }
+  }
+  componentDidMount() {
     this.getEvents();
   }
   getEvents = () => {
     Database.user_getEvents().then((result) => {
       this.setState({ 'events': result });
-      Alert.success("Events loaded", ALERT_SETTINGS);
     }).catch((result) => {
       console.log("could not fetch users; loading backup");
       this.setState({ 'events': result });
-      Alert.warning("Events loaded from backup", ALERT_SETTINGS);
+      Alert.warning("Events loaded from backup (offline)", ALERT_SETTINGS);
     });
   }
   uploadQuillUsers = () => {
     Database.event_addAttendees(this.state.add_potentialUsers);
-    alert("uploading users");
+    alert("uploading users... do not refresh for like 20 seconds");
   }
 
   handleFileRead = (e) => {
@@ -51,7 +52,7 @@ class AdminEvent extends Component {
         var school = userJSON["profile"]["school"];
         var name = userJSON["profile"]["name"];
         var tags = ";participant;";
-        var attendee = new Attendee(name, userScanID, email, school, 0, "", tags);
+        var attendee = new Attendee(name, userScanID, email, school, 0, tags);
         allAttendees.push(attendee);
       }
     }
@@ -74,7 +75,7 @@ class AdminEvent extends Component {
       if (content[v][4].length > 0) {
         tags = ";" + content[v][4].split(";").join(";") + ";";
       }
-      var attendee = new Attendee(name, userScanID, email, school, checkin, "", tags);
+      var attendee = new Attendee(name, userScanID, email, school, checkin, tags);
       allAttendees.push(attendee);
     }
     this.setState({...this.state, add_potentialUsers: allAttendees});
@@ -97,9 +98,16 @@ class AdminEvent extends Component {
     return (
         <Container>
           <Col>
-          <p> Event: <Input type="select" name="event" onChange={this.handleEventChange} value={this.state.event_id}>
-            {events}
-          </Input></p>
+          <FormGroup>
+            <InputGroup><InputGroupAddon addonType="prepend">
+            <InputGroupText> Event: </InputGroupText>
+          </InputGroupAddon>
+            <Input type="select" name="event" onChange={this.handleEventChange} value={this.state.event_id}>
+              {events}
+            </Input>
+              <Button onClick={this.getEvents}> Force Refresh </Button>
+            </InputGroup>
+          </FormGroup>
           </Col>
           Bulk Add from Quill Attendees:
           <Input type='file'
@@ -119,7 +127,7 @@ class AdminEvent extends Component {
             inputStyle={{color: 'black'}}
           />
         <p> Total number of users: {this.state.add_potentialUsers.length} </p>
-        <Input type='submit' onClick={this.uploadQuillUsers}>Add All Users</Input>
+        <Button onClick={this.uploadQuillUsers}>Add All Users</Button>
         </Container>
     )
   }

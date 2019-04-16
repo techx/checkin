@@ -15,6 +15,17 @@ class EventCreate(Resource):
                 return createStatus(APIStatus.ERROR_ACTION)
         return createStatus(APIStatus.INCORRECT_DATA)
 
+class EventDelete(Resource):
+    @APIV1.getClient()
+    def post(self, client):
+        if 'params' in request.form:
+            params = json.loads(request.form['params'])
+            if(Database.deleteEvent(client, params)):
+                return createStatus(APIStatus.SUCCESS)
+            else:
+                return createStatus(APIStatus.ERROR_ACTION)
+        return createStatus(APIStatus.INCORRECT_DATA)
+
 class EventList(Resource):
     @APIV1.getClient()
     def post(self, client):

@@ -1,19 +1,17 @@
 from flask import Flask
 from flask_restful import Api
-import os
+import sys
 
 print("Initializing Checkin Backend")
-
 app = Flask(__name__)
 
-
-
-if os.environ.get('DEBUG', True):
+if len(sys.argv) == 1:
     app.debug = True
     app.config.from_object('config.Config')
 else:
-    print("production not implemented")
-    exit()
+    print("Starting production server")
+    app.debug = False
+    app.config.from_object('config.ProductionConfig')
 
 
 # Database

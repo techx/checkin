@@ -9,6 +9,7 @@ import Constants from "./Constants";
 import ReactTable from "react-table";
 import Popup from "reactjs-popup";
 import Attendee from "./models/Attendee";
+import EasyAccess from "./EasyAccess";
 import 'react-table/react-table.css';
 import 'react-s-alert/dist/s-alert-default.css';
 import 'react-s-alert/dist/s-alert-css-effects/slide.css';
@@ -32,16 +33,20 @@ class Dashboard extends Component {
       'filteredAttendees': [],
       'applyDisabled': true,
       'view_confirmApply': false,
-      'attendee': new Attendee("", "", "", ""),
+      'currentAttendee': new Attendee("", "", "", ""),
       'day': 1
     };
-    fetch(LABEL_URL).then((response) => response.text()).then((result) => {
-      this.printLabelXml = result;
-    }).catch((e) => {
-    });
-    this.getAttendees();
-    if(Database.client_loginStatus() === 1) {
-      Alert.error("Can't connect to server", ALERT_SETTINGS);
+    if (Database.client_loggedIn()) {
+      if (!Database.client_isEmptyEvent()) {
+        fetch(LABEL_URL).then((response) => response.text()).then((result) => {
+          this.printLabelXml = result;
+        }).catch((e) => {
+        });
+        this.getAttendees();
+      }
+      if(Database.client_offline()) {
+        Alert.error("Can't connect to server", ALERT_SETTINGS);
+      }
     }
   }
 
@@ -69,23 +74,6 @@ class Dashboard extends Component {
     document.removeEventListener("keydown", this._handleKeyDown);
   }
 
-  previousPage = (e) => {
-    e.preventDefault();
-
-    this.setState({
-      ...this.state,
-      'page': Math.max(0, this.state.page - 1)
-    });
-  }
-
-  nextPage = (e) => {
-    e.preventDefault();
-
-    this.setState({
-      ...this.state,
-      'page': this.state.page + 1
-    });
-  }
   refreshPrinters = () => {
     this.setState({
       ...this.state,
@@ -98,17 +86,22 @@ class Dashboard extends Component {
       [event.target.name]: (event.target.type === "checkbox") ? event.target.checked : event.target.value
     }, () => {
       // Check to enable applyDisabled
-      if (this.state.checkin !== "doing nothing" || this.state.tags.length > 0 || this.state.printerName !== Constants.DONT_PRINT_NAME) {
-        this.setState({
-          'applyDisabled': false
-        });
-      } else {
-        this.setState({
-          'applyDisabled': true
-        });
-      }
+      this.updateApplyDisabled();
     });
   }
+
+  updateApplyDisabled = () => {
+    if (this.state.checkin !== "doing nothing" || this.state.tags.length > 0 || this.state.printerName !== Constants.DONT_PRINT_NAME) {
+      this.setState({
+        'applyDisabled': false
+      });
+    } else {
+      this.setState({
+        'applyDisabled': true
+      });
+    }
+  }
+
   print = (attendee) => {
     if (this.state.printerName === Constants.DONT_PRINT_NAME) {
       return;
@@ -205,17 +198,32 @@ class Dashboard extends Component {
       }
     }
   }
+  updateApplyFunction = (state) => {
+    this.setState(state, () => {
+      this.updateApplyDisabled();
+    });
+  }
   applyFunctionConfirm = (attendee) => {
+    var tags = this.state.tags.split(",");
+    if (this.state.checkin === "checkin" && !attendee.updateCheckin(this.state.day, true, true)) {
+      Constants.AlertWarning("User has already checked in");
+    }
+    if (this.state.checkin === "uncheckin" && !attendee.updateCheckin(this.state.day, false, true)) {
+      Constants.AlertWarning("User has not been checked in");
+    }
+    if (tags.length > 0 && !attendee.updateTags(tags, true)) {
+      Constants.AlertWarning("Tag already exists");
+    }
     this.setState({
       'view_confirmApply': true,
-      'attendee': attendee
+      'currentAttendee': attendee
     });
   }
   popupClose = () => {
     this.setState({ 'view_confirmApply': false });
   }
   applyFunctionActual = () => {
-    const attendee = this.state.attendee;
+    const attendee = this.state.currentAttendee;
     var tags = this.state.tags.split(",");
     var attendeeJSON;
     if (this.state.checkin === "checkin") {
@@ -258,10 +266,11 @@ class Dashboard extends Component {
 
 
   render() {
-    if (Database.client_currentEvent().id === 0) {
-      return (<Redirect to="/settings" />)
-    }
     if (Database.client_loggedIn()) {
+      if (Database.client_isEmptyEvent()) {
+        Alert.error("Choose an event", ALERT_SETTINGS);
+        return (<Redirect to="/settings" />)
+      }
       const columns = [{ Header: 'Name', accessor: 'name' },
       { Header: 'School', accessor: 'school' },
       { Header: 'Email', accessor: 'email' },
@@ -284,20 +293,21 @@ class Dashboard extends Component {
         Header: 'Tags', accessor: 'tags',
         Cell: row => {
           return row.value.split(";").map((badge) => <span><Badge color="secondary">{badge}</Badge> </span>)
-        }
+        },
+        style:{ 'white-space': 'unset'}
       },
       {
         Header: '',
         Cell: props => <Button onClick={(e) => this.applyFunctionConfirm(props.original)}
           disabled={this.state.applyDisabled} color='danger'>
           Apply
-            {/*<FontAwesomeIcon icon="user-check" />*/}
-        </Button> // Custom cell components!
+        </Button>
       }];
-      let printerOptions = this.state.printers.map((printer) => <option key={printer.name} value={printer.name}>{printer.name}</option>);
+      let printerOptions = this.state.printers.map((printer,index) => <option key={index} value={printer.name}>{printer.name}</option>);
       return (
         <Container>
           <br />
+          <EasyAccess updateApplyFunction={this.updateApplyFunction}/>
           <Col>
             <InputGroup>
               <InputGroupAddon addonType="prepend">
@@ -307,9 +317,9 @@ class Dashboard extends Component {
               </InputGroupAddon>
               <InputGroupAddon addonType="prepend">
                 <CustomInput id="checkin_input" type="select" name="checkin" value={this.state.checkin} onChange={this.handleChange}>
-                  <option value="doing nothing">No Action</option>
-                  <option value="checkin">Checkin</option>
-                  <option value="uncheckin">unCheckin</option>
+                  <option key="1" value="doing nothing">No Action</option>
+                  <option key="2" value="checkin">Checkin</option>
+                  <option key="3" value="uncheckin">unCheckin</option>
                 </CustomInput>
               </InputGroupAddon>
               <Input placeholder="Tags separated by commas (i.e. swag, !swag remove tags)"
@@ -342,7 +352,7 @@ class Dashboard extends Component {
           <Popup open={this.state.view_confirmApply} modal onClose={this.popupClose}>
             <Container>
               <center>
-                <h2>Confirm for {this.state.attendee.name}</h2>
+                <h2>Confirm for {this.state.currentAttendee.name}</h2>
               </center>
               <br />
               <p> Checkin: {this.state.checkin} for DAY {this.state.day}</p>
@@ -381,6 +391,7 @@ class Dashboard extends Component {
         </Container>
       );
     } else {
+      Alert.error("Need to login", ALERT_SETTINGS);
       return (<Redirect to="/login" />)
     }
   }

@@ -10,4 +10,5 @@ class Config(object):
 class ProductionConfig(Config):
     DEVELOPMENT = False
     DEBUG = False
-    DB_HOST = 'my.production.database' # not a docker link
+    SQLALCHEMY_DATABASE_URI = "postgresql://checkin:<password>@localhost/<dbname>"
+    FLASK_ENV = "production"

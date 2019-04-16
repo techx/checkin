@@ -2,7 +2,7 @@ import Constants from "./Constants";
 import Attendee from "./models/Attendee";
 import Event from "./models/Event";
 import User from "./models/User";
-const emptyEvent = new Event("No selected event", 0);
+const emptyEvent = new Event("No selected event", "0");
 const state = {
   login_status: 0,
   token: "",
@@ -18,8 +18,23 @@ const APICALLS = {
     method: "POST",
     requiresToken: true
   },
+  EVENT_DELETE: {
+    url: "events/delete",
+    method: "POST",
+    requiresToken: true
+  },
   USER_CREATE: {
     url: "users/create",
+    method: "POST",
+    requiresToken: true
+  },
+  USER_DELETE: {
+    url: "users/delete",
+    method: "POST",
+    requiresToken: true
+  },
+  USER_ASSIGNEVENT: {
+    url: "users/events/push",
     method: "POST",
     requiresToken: true
   },
@@ -58,11 +73,11 @@ const APICALLS = {
 class Database {
   constructor() {
     // Load actions
-    state.actions = JSON.parse(window.localStorage.getItem('actions')) || [];
+    state.actions = JSON.parse(window.localStorage.getItem('actions') || "[]");
     state.name = window.localStorage.getItem('name') || '';
     state.is_admin = window.localStorage.getItem('is_admin') || false;
     state.currentEvent = JSON.parse(window.localStorage.getItem('event')) || emptyEvent;
-    var events = JSON.parse(window.localStorage.getItem('events')) || [];
+    var events = this.getItemFromStorage(Event);
     for (var v = 0; v < events.length; v += 1) {
       var event = events[v];
       state.id_to_event[event.id] = event;
@@ -75,6 +90,7 @@ class Database {
     }
     this.apiCall(APICALLS.CLIENT_STATUS, {}).then(data => {
       console.log("Client valid");
+      this.push_apiCall();
     }).catch(data => {
       if (data !== Constants.API_ERROR_TIMEOUT) {
         console.log("Client invalid");
@@ -83,7 +99,10 @@ class Database {
         state.name = '';
       } else {
         console.log("Server timeout");
-        state.login_status = 1;
+        // We only change login_status to OFFLINE if token is valid
+        if (state.token.length > 0) {
+          state.login_status = 1;
+        }
       }
     });
   }
@@ -140,8 +159,12 @@ class Database {
     return state.login_status > 0;
   }
 
-  client_loginStatus() {
-    return state.login_status;
+  client_connected() {
+    return state.login_status === 2;
+  }
+
+  client_offline() {
+    return state.login_status === 1;
   }
 
   client_name() {
@@ -155,8 +178,14 @@ class Database {
   client_logout() {
     state.login_status = 0;
     state.name = '';
-    window.localStorage.setItem('token', "");
-    window.localStorage.setItem('name', "");
+    window.localStorage.removeItem('token');
+    window.localStorage.removeItem('name');
+    window.localStorage.removeItem('attendees');
+    window.localStorage.removeItem('events');
+    window.localStorage.removeItem('users');
+    window.localStorage.removeItem('event');
+    window.localStorage.removeItem('is_admin');
+    window.localStorage.removeItem('actions');
   }
 
   client_login(username, password) {
@@ -184,16 +213,19 @@ class Database {
   client_currentEvent() {
     return state.currentEvent;
   }
+  client_isEmptyEvent() {
+    return state.currentEvent === emptyEvent;
+  }
   client_updateEventId(event_id) {
-    var events = JSON.parse(window.localStorage.getItem('events')) || [];
+    var events = this.getItemFromStorage(Event);
     var event = events.find(x => x.id === event_id);
     if (event == null) {
       event = emptyEvent;
     }
     window.localStorage.setItem('event', JSON.stringify(event));
     if (state.currentEvent !== event) {
-      // TODO:
-      // window.localStorage.setItem('attendees', JSON.stringify([]));
+      window.localStorage.removeItem('attendees');
+      this.event_getAttendees().catch((data) => {});
     }
     state.currentEvent = event;
   }
@@ -202,8 +234,20 @@ class Database {
     return this.apiCall(APICALLS.USER_CREATE, params);
   }
 
+  client_deleteUser(params) {
+    return this.apiCall(APICALLS.USER_DELETE, params);
+  }
+
   client_createEvent(params) {
     return this.apiCall(APICALLS.EVENT_CREATE, params);
+  }
+
+  client_deleteEvent(params) {
+    return this.apiCall(APICALLS.EVENT_DELETE, params);
+  }
+
+  client_updateUserEventAssignment(params) {
+    return this.apiCall(APICALLS.USER_ASSIGNEVENT, params);
   }
 
   client_getUsers() {
@@ -218,7 +262,7 @@ class Database {
         resolve(users);
         window.localStorage.setItem('users', JSON.stringify(users));
       }).catch(data => {
-        reject(JSON.parse(window.localStorage.getItem('users')) || []);
+        reject(this.getItemFromStorage(User));
       });
     });
   }
@@ -236,7 +280,7 @@ class Database {
         resolve(events);
         window.localStorage.setItem('events', JSON.stringify(events));
       }).catch(data => {
-        reject(JSON.parse(window.localStorage.getItem('events')) || []);
+        reject(this.getItemFromStorage(Event));
       });
     });
   }
@@ -250,15 +294,31 @@ class Database {
         var searchResults = [];
         for (var v = 0; v < result.attendees.length; v += 1) {
           var atd = result.attendees[v];
-          var attendee = new Attendee(atd.name, atd.scan_value, atd.email, atd.school, atd.checkin_status, atd.notes, atd.actions, atd.id);
+          var attendee = new Attendee(atd.name, atd.scan_value, atd.email, atd.school, atd.checkin_status, atd.tags, atd.id, atd.notes);
           searchResults.push(attendee);
         }
         resolve(searchResults);
         window.localStorage.setItem('attendees', JSON.stringify(searchResults));
       }).catch(data => {
-        reject(JSON.parse(window.localStorage.getItem('attendees')) || []);
+        reject(this.getItemFromStorage(Attendee));
       });
     });
+  }
+  getItemFromStorage(prototype) {
+    var text;
+    if (prototype == Attendee) {
+      text = "attendees";
+    } else if (prototype == Event) {
+      text = "events";
+    } else if (prototype == User) {
+      text = "users";
+    }
+    var valJSON = JSON.parse(window.localStorage.getItem(text) || "[]");
+    var output = [];
+    for (var i=0;i<valJSON.length;i+=1) {
+      output.push(Object.setPrototypeOf(valJSON[i], prototype.prototype));
+    }
+    return output;
   }
   event_addAttendees(listOfAttendees) {
     for (var v = 0; v < listOfAttendees.length; v += 1) {
@@ -274,6 +334,7 @@ class Database {
     }
   }
   event_updateAttendee(attendeeJSON) {
+    console.log("UPDATING USER");
     // Requires id, value, key
     attendeeJSON['action'] = "UPDATE";
     attendeeJSON['event_id'] = state.currentEvent.id;
