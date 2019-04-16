@@ -293,7 +293,8 @@ class Dashboard extends Component {
         Header: 'Tags', accessor: 'tags',
         Cell: row => {
           return row.value.split(";").map((badge) => <span><Badge color="secondary">{badge}</Badge> </span>)
-        }
+        },
+        style:{ 'white-space': 'unset'}
       },
       {
         Header: '',

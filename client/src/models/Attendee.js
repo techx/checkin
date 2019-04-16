@@ -35,11 +35,15 @@ class Attendee {
       }
       // REMOVE TAG
       if (tag[0] === "!") {
-        this.tags = this.tags.replace(tag.substring(1) + ";",'');
-        removedTags.push(tag.substring(1));
+        if (!noAction) {
+          this.tags = this.tags.replace(tag.substring(1) + ";",'');
+          removedTags.push(tag.substring(1));
+        }
       } else if (!this.tags.includes(tag + ";")) {
-        this.tags += tag + ";";
-        addedTags.push(tag);
+        if(!noAction) {
+          this.tags += tag + ";";
+          addedTags.push(tag);
+        }
       } else {
         // Includes tag
         if (noAction) {
